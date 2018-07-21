@@ -10,5 +10,9 @@ object Messages {
     case class FileModifiedMsg(file: File) extends FileEventMessage
   }
 
+  sealed trait EventDataMessage
+  object EventDataMessage {
+    case class ModificationDataMsg(path: Path, oldLines: Traversable[String], newLines: Traversable[String])
+  }
   //TODO: more msgs
 }

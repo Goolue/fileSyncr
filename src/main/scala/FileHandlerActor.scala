@@ -1,20 +1,30 @@
 import java.nio.file.Path
 
-import Messages.FileEventMessage.FileCreatedMsg
+import Messages.EventDataMessage.ModificationDataMsg
+import Messages.FileEventMessage.{FileCreatedMsg, FileModifiedMsg}
 import akka.actor.{Actor, ActorRef}
 
 import scala.collection.mutable
 
-class FileHandlerActor(val diffActor: ActorRef) extends Actor{
+class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends Actor{
 
-  val pathToLines: mutable.Map[Path, Traversable[String]] = mutable.Map()
+  private val pathToLines: mutable.Map[Path, Traversable[String]] = mutable.Map.empty
 
   def receive() = {
     case fileCreateMsg: FileCreatedMsg =>
-      diffActor ! fileCreateMsg
-//      val lines = fileCreateMsg.file.lines
-//      pathToLines += (fileCreateMsg.file.path -> lines)
+      commActor ! fileCreateMsg
+
+    case fileModifiedMsg: FileModifiedMsg =>
+      val oldLines = pathToLines.getOrElse(fileModifiedMsg.file.path, null)
+      val newLines = fileModifiedMsg.file.lines
+      diffActor ! ModificationDataMsg(fileModifiedMsg.file.path, oldLines, newLines)
+      pathToLines(fileModifiedMsg.file.path) = newLines
   }
 
-//  def mapContains(path: Path): Boolean = pathToLines.contains(path)
+  def mapContains(path: Path): Boolean = pathToLines.contains(path)
+
+  def mapContainsValue(lines: Traversable[String]): Boolean = {
+    for ((_, value) <- pathToLines) if (value.equals(lines)) return true
+    false
+  }
 }
