@@ -12,12 +12,14 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
 
   def receive() = {
     case fileCreateMsg: FileCreatedMsg =>
+      println(s"FileHandlerActor got a FileCreatedMsd for path ${fileCreateMsg.file.path}")
       commActor ! fileCreateMsg
 
     case fileModifiedMsg: FileModifiedMsg =>
+      println(s"FileHandlerActor got a FileModifiedMsg for path ${fileModifiedMsg.file.path}")
       val oldLines = pathToLines.getOrElse(fileModifiedMsg.file.path, null)
       val newLines = fileModifiedMsg.file.lines
-      diffActor ! ModificationDataMsg(fileModifiedMsg.file.path, oldLines, newLines)
+      diffActor ! ModificationDataMsg(fileModifiedMsg.file.path, newLines, oldLines)
       pathToLines(fileModifiedMsg.file.path) = newLines
   }
 

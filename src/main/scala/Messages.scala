@@ -12,7 +12,7 @@ object Messages {
 
   sealed trait EventDataMessage
   object EventDataMessage {
-    case class ModificationDataMsg(path: Path, oldLines: Traversable[String], newLines: Traversable[String])
+    case class ModificationDataMsg(path: Path, newLines: Traversable[String], implicit val oldLines: Traversable[String] = null)
   }
   //TODO: more msgs
 }
