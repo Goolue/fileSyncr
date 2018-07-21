@@ -15,7 +15,7 @@
 	alt modified
 		
 		FileWatcherConfigurer -> FileHandlerActor : FileModifiedMsg(file)
-		FileHandlerActor -> DiffActor : EventMsg(path, new lines, old lines)
+		FileHandlerActor -> DiffActor : ModificationDataMsg(path, new lines, old lines)
 		FileHandlerActor -> FileHandlerActor : update map
 		DiffActor -> DiffActor : calc diff
 		DiffActor -> CommActor_local : DiffEventMsg(path, diff)
@@ -31,7 +31,6 @@
 	else created
 
 		FileWatcherConfigurer -> FileHandlerActor : FileCreatedMsg(file)
-		FileHandlerActor -> FileHandlerActor : update map
 		note over FileHandlerActor 
 			"maybe something in between FileHandlerActor and CommActor_local"
 		endnote
