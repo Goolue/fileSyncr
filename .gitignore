@@ -5,3 +5,5 @@ project/target/streams/compile/compileIncSetup/
 target/scala-2\.12/classes/
 
 *.class
+
+target/scala-2\.12/test-classes/
