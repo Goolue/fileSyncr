@@ -1,3 +1,7 @@
 
 project/target/streams/compile/compileIncSetup/
 /.idea/
+
+target/scala-2\.12/classes/
+
+*.class
