@@ -1,0 +1,57 @@
+@startuml
+	
+	actor fileSystem
+	participant FileWatcherConfigurer
+	participant FileHandlerActor
+	participant DiffActor
+	participant CommActor_local
+	participant CommActor_remote
+	participant DiffActor_remote
+	participant FileHandlerActor_remote
+	actor fileSystem_remote
+
+	fileSystem -> FileWatcherConfigurer : event(path)
+	
+	alt modified
+		
+		FileWatcherConfigurer -> FileHandlerActor : FileModifiedMsg(file)
+		FileHandlerActor -> DiffActor : EventMsg(path, new lines, old lines)
+		FileHandlerActor -> FileHandlerActor : update map
+		DiffActor -> DiffActor : calc diff
+		DiffActor -> CommActor_local : DiffEventMsg(path, diff)
+		CommActor_local -> CommActor_remote : DiffEventMsg(path, diff)
+		CommActor_remote -> DiffActor_remote : ApplyPatchMsg(path, diff)
+		DiffActor_remote -> FileHandlerActor_remote : GetLinesMsg(path)
+		FileHandlerActor_remote -> DiffActor_remote : OldLinesMsg(lines)
+		DiffActor_remote -> DiffActor_remote : apply patch
+		DiffActor_remote -> FileHandlerActor_remote : UpdateFileMsg(path, lines)
+		FileHandlerActor_remote -> fileSystem_remote : update file (path)
+		FileHandlerActor_remote -> FileHandlerActor_remote : update map
+
+	else created
+
+		FileWatcherConfigurer -> FileHandlerActor : FileCreatedMsg(file)
+		FileHandlerActor -> FileHandlerActor : update map
+		note over FileHandlerActor 
+			"maybe something in between FileHandlerActor and CommActor_local"
+		endnote
+		FileHandlerActor -> CommActor_local : FileCreatedMsg(file)
+		CommActor_local -> CommActor_remote : FileCreatedMsg(file)
+		CommActor_remote -> FileHandlerActor_remote : CreateFileMsg(path)
+		FileHandlerActor_remote -> fileSystem_remote : creates file
+
+	else deleted
+
+		FileWatcherConfigurer -> FileHandlerActor : FileDeletedMsg(file)
+		FileHandlerActor -> FileHandlerActor : update map
+		note over FileHandlerActor 
+			"maybe something in between FileHandlerActor and CommActor_local"
+		endnote
+		FileHandlerActor -> CommActor_local : FileDeletedMsg(path)
+		CommActor_local -> CommActor_remote : FileDeletedMsg(path)
+		CommActor_remote -> FileHandlerActor_remote : DeleteFile(path)
+		FileHandlerActor_remote -> fileSystem_remote : deletes file
+
+	end
+
+@enduml
