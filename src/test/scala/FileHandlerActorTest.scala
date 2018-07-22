@@ -39,7 +39,6 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   "A FileHandlerActor" must {
     "send a FileCreatedMsg unchanged when receiving a FileCreatedMsg" in {
-//      val (fileHandler: TestActorRef[FileHandlerActor], actor: FileHandlerActor, probe: TestProbe) = createFileHandlerActorAndProbe
       val fileToSend = File.home
       val msg = FileCreatedMsg(fileToSend)
       fileHandler.tell(msg, probe.ref)
@@ -63,7 +62,6 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   it must {
     "update it's map when receiving a FileModifiedMsg" in {
-//      val (fileHandler: TestActorRef[FileHandlerActor], actor: FileHandlerActor, probe: TestProbe) = createFileHandlerActorAndProbe
       val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
       val msg = FileModifiedMsg(fileToSend)
       fileHandler.tell(msg, probe.ref)
@@ -79,7 +77,6 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
   it must {
     "send a ModificationDataMsg with the correct path, null old lines and new lines when " +
     "receiving a FileModifiedMsg for the first time" in {
-//      val (fileHandler: TestActorRef[FileHandlerActor], actor: FileHandlerActor, probe: TestProbe) = createFileHandlerActorAndProbe
       val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
       val msg = FileModifiedMsg(fileToSend)
       fileHandler.tell(msg, probe.ref)
@@ -94,7 +91,6 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   it must {
     "NOT have the path of the file to it's map when receiving a FileDeletedMsg" in {
-//      val (fileHandler: TestActorRef[FileHandlerActor], actor: FileHandlerActor, probe: TestProbe) = createFileHandlerActorAndProbe
       val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
 
       //send a file mod msg so the path will be in the map
