@@ -1,5 +1,7 @@
-import Messages.EventDataMessage.ModificationDataMsg
-import Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
+package actors
+
+import actors.Messages.EventDataMessage.ModificationDataMsg
+import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import better.files.File
@@ -48,7 +50,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   it must {
     "NOT add the path of the file to it's map when receiving a FileCreatedMsg" in {
-//      val (fileHandler: TestActorRef[FileHandlerActor], actor: FileHandlerActor, probe: TestProbe) = createFileHandlerActorAndProbe
+//      val (fileHandler: TestActorRef[actors.FileHandlerActor], actor: actors.FileHandlerActor, probe: TestProbe) = createFileHandlerActorAndProbe
       val fileToSend = File.home
       val msg = FileCreatedMsg(fileToSend)
       fileHandler.tell(msg, probe.ref)

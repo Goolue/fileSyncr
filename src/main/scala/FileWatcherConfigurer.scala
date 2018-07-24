@@ -1,6 +1,6 @@
 import java.nio.file.{Paths, StandardWatchEventKinds => EventType}
 
-import Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
+import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import better.files.FileWatcher._
 import better.files._
