@@ -13,7 +13,7 @@ class DiffActor(val commActor: ActorRef, val fileHandler : ActorRef) extends Act
       println("got a ModificationDataMsg")
       val patch: Patch[String] = oldLines match {
         case null => DiffUtils.diff(List[String]().asJava, newLines.toList.asJava)
-        case _ => null //TODO
+        case _ => DiffUtils.diff(oldLines.toList.asJava, newLines.toList.asJava)
       }
       commActor ! DiffEventMsg(path, patch)
     case _ => println("got an unexpected msg!")
