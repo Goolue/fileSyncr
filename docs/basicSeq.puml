@@ -2,7 +2,7 @@
 	
 	actor fileSystem
 	participant FileWatcherConfigurer
-	participant FileHandlerActor
+	participant actors.FileHandlerActor
 	participant DiffActor
 	participant CommActor_local
 	participant CommActor_remote
@@ -14,11 +14,11 @@
 	
 	alt modified
 		
-		FileWatcherConfigurer -> FileHandlerActor : FileModifiedMsg(file)
-		FileHandlerActor -> DiffActor : ModificationDataMsg(path, new lines, old lines)
-		FileHandlerActor -> FileHandlerActor : update map
+		FileWatcherConfigurer -> actors.FileHandlerActor : FileModifiedMsg(file)
+		actors.FileHandlerActor -> DiffActor : ModificationDataMsg(path, new lines, old lines)
+		actors.FileHandlerActor -> actors.FileHandlerActor : update map
 		DiffActor -> DiffActor : calc diff
-		DiffActor -> CommActor_local : DiffEventMsg(path, diff)
+		DiffActor -> CommActor_local : DiffEventMsg(path, patch)
 		CommActor_local -> CommActor_remote : DiffEventMsg(path, diff)
 		CommActor_remote -> DiffActor_remote : ApplyPatchMsg(path, diff)
 		DiffActor_remote -> FileHandlerActor_remote : GetLinesMsg(path)
@@ -30,23 +30,23 @@
 
 	else created
 
-		FileWatcherConfigurer -> FileHandlerActor : FileCreatedMsg(file)
-		note over FileHandlerActor 
-			"maybe something in between FileHandlerActor and CommActor_local"
+		FileWatcherConfigurer -> actors.FileHandlerActor : FileCreatedMsg(file)
+		note over actors.FileHandlerActor
+			"maybe something in between actors.FileHandlerActor and CommActor_local"
 		endnote
-		FileHandlerActor -> CommActor_local : FileCreatedMsg(file)
+		actors.FileHandlerActor -> CommActor_local : FileCreatedMsg(file)
 		CommActor_local -> CommActor_remote : FileCreatedMsg(file)
 		CommActor_remote -> FileHandlerActor_remote : CreateFileMsg(path)
 		FileHandlerActor_remote -> fileSystem_remote : creates file
 
 	else deleted
 
-		FileWatcherConfigurer -> FileHandlerActor : FileDeletedMsg(file)
-		FileHandlerActor -> FileHandlerActor : update map
-		note over FileHandlerActor 
-			"maybe something in between FileHandlerActor and CommActor_local"
+		FileWatcherConfigurer -> actors.FileHandlerActor : FileDeletedMsg(file)
+		actors.FileHandlerActor -> actors.FileHandlerActor : update map
+		note over actors.FileHandlerActor
+			"maybe something in between actors.FileHandlerActor and CommActor_local"
 		endnote
-		FileHandlerActor -> CommActor_local : FileDeletedMsg(path)
+		actors.FileHandlerActor -> CommActor_local : FileDeletedMsg(path)
 		CommActor_local -> CommActor_remote : FileDeletedMsg(path)
 		CommActor_remote -> FileHandlerActor_remote : DeleteFile(path)
 		FileHandlerActor_remote -> fileSystem_remote : deletes file
