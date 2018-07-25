@@ -19,12 +19,12 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
       println(s"actors.FileHandlerActor got a FileCreatedMsd for path ${fileCreateMsg.file.path}")
       commActor ! fileCreateMsg
 
-    case fileModifiedMsg: FileModifiedMsg =>
-      println(s"actors.FileHandlerActor got a FileModifiedMsg for path ${fileModifiedMsg.file.path}")
-      val oldLines = pathToLines.getOrElse[LinesOption](fileModifiedMsg.file.path, None)
-      val newLines = fileModifiedMsg.file.lines
-      diffActor ! ModificationDataMsg(fileModifiedMsg.file.path, newLines, oldLines)
-      pathToLines(fileModifiedMsg.file.path) = Some(newLines)
+    case FileModifiedMsg(file) =>
+      println(s"actors.FileHandlerActor got a FileModifiedMsg for path ${file.path}")
+      val oldLines = pathToLines.getOrElse[LinesOption](file.path, None)
+      val newLines = file.lines
+      diffActor ! ModificationDataMsg(file.path, newLines, oldLines)
+      pathToLines(file.path) = Some(newLines)
 
     case fileDeletedMsg: FileDeletedMsg =>
       println(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.file.path}")
