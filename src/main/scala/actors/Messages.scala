@@ -20,7 +20,7 @@ object Messages {
   sealed trait EventDataMessage
   object EventDataMessage {
     case class ModificationDataMsg(path: Path, newLines: Traversable[String],
-                                   implicit val oldLines: Traversable[String] = null) extends EventDataMessage
+                                   implicit val oldLines: Option[Traversable[String]] = None) extends EventDataMessage
     case class DiffEventMsg(path: Path, patch: StringPatch) extends EventDataMessage
     case class ApplyPatchMsg(path: Path, patch: StringPatch) extends EventDataMessage
     case class UpdateFileMsg(path: Path, lines: Traversable[String]) extends EventDataMessage

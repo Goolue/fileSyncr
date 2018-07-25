@@ -65,7 +65,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       //needs to be done this way because Patch.equals is not good
       expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
         case ModificationDataMsg(receivedPath, receivedNewLines, receivedOldLines) =>
-          receivedPath.equals(path) && receivedNewLines.equals(newLines.asJava) && receivedOldLines == null
+          receivedPath == path && receivedNewLines == newLines.asJava && receivedOldLines.isEmpty
         case _ => false
       }
     }
@@ -74,7 +74,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   it must {
     "send a DiffEventMsg(path, diff) when receiving a ModificationDataMsg(path, newLines, oldLines != null)" in {
       val oldLines = List("first line", "second line", "Im a different third line", "forth line")
-      val modMsg = ModificationDataMsg(path, newLines, oldLines)
+      val modMsg = ModificationDataMsg(path, newLines, Some(oldLines))
       diffActor.tell(modMsg, probe.ref)
 
       val patch: Patch[String] = DiffUtils.diff(oldLines.asJava, newLines.asJava)
@@ -83,7 +83,8 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       //needs to be done this way because Patch.equals is not good
       expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
         case ModificationDataMsg(receivedPath, receivedNewLines, receivedOldLines) =>
-          receivedPath == path && receivedNewLines == newLines.asJava && receivedOldLines == oldLines
+          receivedPath == path && receivedNewLines == newLines.asJava &&
+            receivedOldLines.getOrElse(None) == oldLines
         case _ => false
       }
     }
@@ -113,8 +114,6 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       val oldLinesMsg = OldLinesMsg(oldLines, path, patch)
 
       diffActor.tell(oldLinesMsg, probe.ref)
-
-      val updatedFileMsg = UpdateFileMsg(path, newLines)
 
       expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
         case UpdateFileMsg(expectedPath, expectedLines) =>

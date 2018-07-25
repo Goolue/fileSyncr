@@ -77,14 +77,14 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
   }
 
   it must {
-    "send a ModificationDataMsg with the correct path, null old lines and new lines when " +
+    "send a ModificationDataMsg with the correct path, None old lines, and new lines when " +
     "receiving a FileModifiedMsg for the first time" in {
       val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
       val msg = FileModifiedMsg(fileToSend)
       fileHandler.tell(msg, probe.ref)
 
       val expectedNewLines = Traversable[String]("some text here")
-      val expectedOldLines = null
+      val expectedOldLines = None
       val expecedPath = fileToSend.path
 
       expectMsg(ModificationDataMsg(expecedPath, expectedNewLines, expectedOldLines))

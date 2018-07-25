@@ -10,7 +10,8 @@ import scala.collection.mutable
 
 class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends Actor{
 
-  private val pathToLines: mutable.Map[Path, Traversable[String]] = mutable.Map.empty
+  type LinesOption = Option[Traversable[String]]
+  private val pathToLines: mutable.Map[Path, LinesOption] = mutable.Map.empty
 
   def receive() = {
     case fileCreateMsg: FileCreatedMsg =>
@@ -19,10 +20,10 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
 
     case fileModifiedMsg: FileModifiedMsg =>
       println(s"actors.FileHandlerActor got a FileModifiedMsg for path ${fileModifiedMsg.file.path}")
-      val oldLines = pathToLines.getOrElse(fileModifiedMsg.file.path, null)
+      val oldLines = pathToLines.getOrElse[LinesOption](fileModifiedMsg.file.path, None)
       val newLines = fileModifiedMsg.file.lines
       diffActor ! ModificationDataMsg(fileModifiedMsg.file.path, newLines, oldLines)
-      pathToLines(fileModifiedMsg.file.path) = newLines
+      pathToLines(fileModifiedMsg.file.path) = Some(newLines)
 
     case fileDeletedMsg: FileDeletedMsg =>
       println(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.file.path}")
@@ -32,8 +33,8 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
 
   def mapContains(path: Path): Boolean = pathToLines.contains(path)
 
-  def mapContainsValue(lines: Traversable[String]): Boolean = {
-    for ((_, value) <- pathToLines) if (value.equals(lines)) return true
+  def mapContainsValue(lines: LinesOption): Boolean = {
+    for ((_, value) <- pathToLines) if (value == lines) return true
     false
   }
 
