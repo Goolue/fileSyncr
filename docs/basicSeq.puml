@@ -19,10 +19,10 @@
 		actors.FileHandlerActor -> actors.FileHandlerActor : update map
 		DiffActor -> DiffActor : calc diff
 		DiffActor -> CommActor_local : DiffEventMsg(path, patch)
-		CommActor_local -> CommActor_remote : DiffEventMsg(path, diff)
-		CommActor_remote -> DiffActor_remote : ApplyPatchMsg(path, diff)
-		DiffActor_remote -> FileHandlerActor_remote : GetLinesMsg(path)
-		FileHandlerActor_remote -> DiffActor_remote : OldLinesMsg(lines)
+		CommActor_local -> CommActor_remote : DiffEventMsg(path, patch)
+		CommActor_remote -> DiffActor_remote : ApplyPatchMsg(path, patch)
+		DiffActor_remote -> FileHandlerActor_remote : GetLinesMsg(path, patch)
+		FileHandlerActor_remote -> DiffActor_remote : OldLinesMsg(lines, path, patch)
 		DiffActor_remote -> DiffActor_remote : apply patch
 		DiffActor_remote -> FileHandlerActor_remote : UpdateFileMsg(path, lines)
 		FileHandlerActor_remote -> fileSystem_remote : update file (path)
