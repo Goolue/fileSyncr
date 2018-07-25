@@ -4,6 +4,7 @@ import java.nio.file.Path
 
 import Messages.FileEventMessage._
 import actors.Messages.EventDataMessage.ModificationDataMsg
+import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.{Actor, ActorRef}
 
 import scala.collection.mutable
@@ -29,6 +30,11 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
       println(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.file.path}")
       commActor ! fileDeletedMsg
       pathToLines -= fileDeletedMsg.file.path
+
+    case GetLinesMsg(path, patch) =>
+      println(s"actors.FileHandlerActor got a GetLinesMsg for path $path")
+      val lines = pathToLines.getOrElse(path, None)
+      diffActor ! OldLinesMsg(lines.getOrElse(None), path, patch)
   }
 
   def mapContains(path: Path): Boolean = pathToLines.contains(path)

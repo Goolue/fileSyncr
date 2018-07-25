@@ -8,7 +8,7 @@ import com.github.difflib.DiffUtils
 import scala.collection.JavaConverters._
 
 class DiffActor(val commActor: ActorRef, val fileHandler : ActorRef) extends Actor{
-  def receive() = {
+  def receive(): PartialFunction[Any, Unit] = {
     case ModificationDataMsg(path, newLines, oldLines) =>
       println("got a ModificationDataMsg")
       val oldLinesValue = oldLines.getOrElse(List())

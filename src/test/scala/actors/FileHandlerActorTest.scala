@@ -2,13 +2,17 @@ package actors
 
 import actors.Messages.EventDataMessage.ModificationDataMsg
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
+import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import better.files.File
+import com.github.difflib.patch.Patch
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpecLike}
 
 class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter{
+
+  val TEXT_IN_FILE = "some text here"
 
   var fileHandler: TestActorRef[FileHandlerActor] = _
   var actor: FileHandlerActor = _
@@ -83,7 +87,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       val msg = FileModifiedMsg(fileToSend)
       fileHandler.tell(msg, probe.ref)
 
-      val expectedNewLines = Traversable[String]("some text here")
+      val expectedNewLines = Traversable[String](TEXT_IN_FILE)
       val expectedOldLines = None
       val expecedPath = fileToSend.path
 
@@ -125,6 +129,24 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       fileHandler.tell(msg, probe.ref)
 
       expectMsg(msg)
+    }
+  }
+
+  it must {
+    "send an OldLinesMsg(lines, path, patch) when receiving a GetLinesMsg(path, patch)" in {
+
+      //send a file mod msg so the path will be in the map
+      val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
+      val modMsg = FileModifiedMsg(fileToSend)
+      fileHandler.tell(modMsg, probe.ref)
+      //clear the message from the queue
+      expectMsgType[ModificationDataMsg]
+
+      val patch: Patch[String] = new Patch()
+      val getLinesMsg = GetLinesMsg(fileToSend.path, patch)
+      fileHandler.tell(getLinesMsg, probe.ref)
+
+      expectMsg(OldLinesMsg(List(TEXT_IN_FILE), fileToSend.path, patch))
     }
   }
 

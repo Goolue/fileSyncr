@@ -122,6 +122,4 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       }
     }
   }
-
-  //TODO continue here
 }
