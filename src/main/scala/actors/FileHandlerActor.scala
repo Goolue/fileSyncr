@@ -23,8 +23,6 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
       for ((_, value) <- pathToLines) if (value == lines) sender() ! true
         sender() ! false
 
-    case ClearMap => context become handleMessages(Map.empty)
-
     //other msgs
     case fileCreateMsg: FileCreatedMsg =>
       println(s"actors.FileHandlerActor got a FileCreatedMsd for path ${fileCreateMsg.file.path}")
@@ -55,5 +53,4 @@ object FileHandlerActor {
   sealed trait MapQueryMsg
   case class MapContainsKey(path: Path) extends MapQueryMsg
   case class MapContainsValue(lines: LinesOption) extends MapQueryMsg
-  case class ClearMap() extends MapQueryMsg
 }

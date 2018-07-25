@@ -1,11 +1,11 @@
 package actors
 
-import actors.FileHandlerActor.{ClearMap, MapContainsKey}
+import actors.FileHandlerActor.MapContainsKey
 import actors.Messages.EventDataMessage.ModificationDataMsg
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
-import akka.actor.{ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
+import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
 import com.github.difflib.patch.Patch
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpecLike}
@@ -15,41 +15,25 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   val TEXT_IN_FILE = "some text here"
 
-  var fileHandler: TestActorRef[FileHandlerActor] = _
-  var actor: FileHandlerActor = _
-  var probe: TestProbe = _
+  var fileHandler: ActorRef = _
 
   before {
-    val (fileHandler: TestActorRef[FileHandlerActor], actor: FileHandlerActor, probe: TestProbe) = createFileHandlerActorAndProbe
-    this.fileHandler = fileHandler
-    this.actor = actor
-    this.probe = probe
+    this.fileHandler = system.actorOf(Props(new FileHandlerActor(testActor, testActor)))
   }
 
   after {
-    fileHandler.tell(ClearMap, probe.ref)
     fileHandler = null
-//    actor.clearMap()
-    actor = null
-    probe = null
   }
 
   override def afterAll {
     TestKit.shutdownActorSystem(system)
   }
 
-  private def createFileHandlerActorAndProbe: (TestActorRef[FileHandlerActor], FileHandlerActor, TestProbe) = {
-    val fileHandler = TestActorRef[FileHandlerActor](Props(new FileHandlerActor(testActor, testActor)))
-    val actor = fileHandler.underlyingActor
-    val probe = new TestProbe(system)
-    (fileHandler, actor, probe)
-  }
-
   "A FileHandlerActor" must {
     "send a FileCreatedMsg unchanged when receiving a FileCreatedMsg" in {
       val fileToSend = File.home
       val msg = FileCreatedMsg(fileToSend)
-      fileHandler.tell(msg, probe.ref)
+      fileHandler ! msg
       expectMsg(msg)
     }
   }
@@ -59,7 +43,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 //      val (fileHandler: TestActorRef[actors.FileHandlerActor], actor: actors.FileHandlerActor, probe: TestProbe) = createFileHandlerActorAndProbe
       val fileToSend = File.home
       val msg = FileCreatedMsg(fileToSend)
-      fileHandler.tell(msg, probe.ref)
+      fileHandler ! msg
 
       //clear the message from the queue
       expectMsgType[FileCreatedMsg]
@@ -74,7 +58,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
     "update it's map when receiving a FileModifiedMsg" in {
       val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
       val msg = FileModifiedMsg(fileToSend)
-      fileHandler.tell(msg, probe.ref)
+      fileHandler ! msg
 
       //clear the message from the queue
       expectMsgType[ModificationDataMsg]
@@ -90,7 +74,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
     "receiving a FileModifiedMsg for the first time" in {
       val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
       val msg = FileModifiedMsg(fileToSend)
-      fileHandler.tell(msg, probe.ref)
+      fileHandler ! msg
 
       val expectedNewLines = Traversable[String](TEXT_IN_FILE)
       val expectedOldLines = None
@@ -106,12 +90,12 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
       //send a file mod msg so the path will be in the map
       val modMsg = FileModifiedMsg(fileToSend)
-      fileHandler.tell(modMsg, probe.ref)
+      fileHandler ! modMsg
       //clear the message from the queue
       expectMsgType[ModificationDataMsg]
 
       val msg = FileDeletedMsg(fileToSend)
-      fileHandler.tell(msg, probe.ref)
+      fileHandler ! msg
 
       //clear the message from the queue
       expectMsgType[FileDeletedMsg]
@@ -127,12 +111,12 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
       //send a file mod msg so the path will be in the map
       val modMsg = FileModifiedMsg(fileToSend)
-      fileHandler.tell(modMsg, probe.ref)
+      fileHandler ! modMsg
       //clear the message from the queue
       expectMsgType[ModificationDataMsg]
 
       val msg = FileDeletedMsg(fileToSend)
-      fileHandler.tell(msg, probe.ref)
+      fileHandler ! msg
 
       expectMsg(msg)
     }
@@ -144,13 +128,13 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       //send a file mod msg so the path will be in the map
       val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
       val modMsg = FileModifiedMsg(fileToSend)
-      fileHandler.tell(modMsg, probe.ref)
+      fileHandler ! modMsg
       //clear the message from the queue
       expectMsgType[ModificationDataMsg]
 
       val patch: Patch[String] = new Patch()
       val getLinesMsg = GetLinesMsg(fileToSend.path, patch)
-      fileHandler.tell(getLinesMsg, probe.ref)
+      fileHandler ! getLinesMsg
 
       expectMsg(OldLinesMsg(List(TEXT_IN_FILE), fileToSend.path, patch))
     }
