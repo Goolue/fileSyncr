@@ -2,7 +2,6 @@ package actors
 
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg, ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
-import actors.Messages.StringPatch
 import akka.actor.{Actor, ActorRef}
 import com.github.difflib.DiffUtils
 
@@ -12,10 +11,8 @@ class DiffActor(val commActor: ActorRef, val fileHandler : ActorRef) extends Act
   def receive() = {
     case ModificationDataMsg(path, newLines, oldLines) =>
       println("got a ModificationDataMsg")
-      val patch: StringPatch = oldLines match {
-        case None => DiffUtils.diff(List[String]().asJava, newLines.toList.asJava)
-        case _ => DiffUtils.diff(oldLines.get.toList.asJava, newLines.toList.asJava)
-      }
+      val oldLinesValue = oldLines.getOrElse(List())
+      val patch = DiffUtils.diff(oldLinesValue.toList.asJava, newLines.toList.asJava)
       commActor ! DiffEventMsg(path, patch)
 
     case ApplyPatchMsg(path, patch) =>
