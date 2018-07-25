@@ -12,21 +12,9 @@ import actors.Messages.EventDataMessage.ModificationDataMsg
 
 class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends Actor{
 
-//  def mapContains(path: Path): Boolean = pathToLines.contains(path)
-//
-//  def mapContainsValue(lines: LinesOption): Boolean = {
-//    for ((_, value) <- pathToLines) if (value == lines) return true
-//    false
-//  }
-//
-//  def clearMap(): Unit = pathToLines.clear()
+  def receive: Receive = handleMessages(Map.empty)
 
-
-  //  private val pathToLines: mutable.Map[Path, LinesOption] = mutable.Map.empty
-
-  def receive: Receive = handleMessages(mutable.Map.empty)
-
-  def handleMessages(pathToLines: mutable.Map[Path, LinesOption]): Receive = {
+  def handleMessages(pathToLines: Map[Path, LinesOption]): Receive = {
     //MapQueryMsg
     case MapContainsKey(path) =>
       sender() ! pathToLines.contains(path)
@@ -35,7 +23,7 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
       for ((_, value) <- pathToLines) if (value == lines) sender() ! true
         sender() ! false
 
-    case ClearMap => pathToLines.clear()
+    case ClearMap => context become handleMessages(Map.empty)
 
     //other msgs
     case fileCreateMsg: FileCreatedMsg =>
@@ -47,12 +35,12 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
       val oldLines = pathToLines.getOrElse[LinesOption](file.path, None)
       val newLines = file.lines
       diffActor ! ModificationDataMsg(file.path, newLines, oldLines)
-      pathToLines(file.path) = Some(newLines)
+      context become handleMessages(pathToLines.updated(file.path, Some(newLines)))
 
     case fileDeletedMsg: FileDeletedMsg =>
       println(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.file.path}")
       commActor ! fileDeletedMsg
-      pathToLines -= fileDeletedMsg.file.path
+      context become handleMessages(pathToLines - fileDeletedMsg.file.path)
 
     case GetLinesMsg(path, patch) =>
       println(s"actors.FileHandlerActor got a GetLinesMsg for path $path")
