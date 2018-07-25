@@ -1,8 +1,11 @@
 package actors
 
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 
-import actors.Messages.EventDataMessage.{DiffEventMsg, ModificationDataMsg}
+import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg, ModificationDataMsg, UpdateFileMsg}
+import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
+import actors.Messages.StringPatch
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import better.files.File
@@ -16,10 +19,12 @@ import scala.concurrent.duration.Duration
 class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
 
-  var diffActor: TestActorRef[DiffActor] = _
-  var newLines: List[String] = _
-  var path: Path = _
-  var probe: TestProbe = _
+  private val NUM_SECS_TO_WAIT = 3
+
+  private var diffActor: TestActorRef[DiffActor] = _
+  private var newLines: List[String] = _
+  private var path: Path = _
+  private var probe: TestProbe = _
 
   before {
     val (diffActor, newLines, path, probe) = createDiffActorPathNewLinesAndProbe
@@ -58,7 +63,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       val diffMsg = DiffEventMsg(path, patch)
 
       //needs to be done this way because Patch.equals is not good
-      expectMsgPF(Duration.Undefined) {
+      expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
         case ModificationDataMsg(receivedPath, receivedNewLines, receivedOldLines) =>
           receivedPath.equals(path) && receivedNewLines.equals(newLines.asJava) && receivedOldLines == null
         case _ => false
@@ -76,9 +81,44 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       val diffMsg = DiffEventMsg(path, patch)
 
       //needs to be done this way because Patch.equals is not good
-      expectMsgPF(Duration.Undefined) {
+      expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
         case ModificationDataMsg(receivedPath, receivedNewLines, receivedOldLines) =>
-          receivedPath.equals(path) && receivedNewLines.equals(newLines.asJava) && receivedOldLines.equals(oldLines)
+          receivedPath == path && receivedNewLines == newLines.asJava && receivedOldLines == oldLines
+        case _ => false
+      }
+    }
+  }
+
+  it must {
+    "send a GetLinesMsg(path, patch) when receiving an ApplyPatchMsg(path, patch)" in {
+      val patch: StringPatch = DiffUtils.diff(List[String]().asJava, newLines.asJava)
+      val applyPatchMsg = ApplyPatchMsg(path, patch)
+
+      diffActor.tell(applyPatchMsg, probe.ref)
+
+      val getterMsg = GetLinesMsg(path, patch)
+
+      expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
+        case GetLinesMsg(expectedPath, expectedPatch) =>
+          expectedPath == path && expectedPatch == patch
+        case _ => false
+      }
+    }
+  }
+
+  it must {
+    "send a UpdateFileMsg(path, patch(lines)) when receiving an OldLinesMsg(lines, path, patch)" in {
+      val oldLines = List[String]("first line", "some other line")
+      val patch: StringPatch = DiffUtils.diff(oldLines.asJava, newLines.asJava)
+      val oldLinesMsg = OldLinesMsg(oldLines, path, patch)
+
+      diffActor.tell(oldLinesMsg, probe.ref)
+
+      val updatedFileMsg = UpdateFileMsg(path, newLines)
+
+      expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
+        case UpdateFileMsg(expectedPath, expectedLines) =>
+          expectedPath == path && expectedLines == newLines
         case _ => false
       }
     }
