@@ -2,19 +2,42 @@ package actors
 
 import java.nio.file.Path
 
-import Messages.FileEventMessage._
-import actors.Messages.EventDataMessage.ModificationDataMsg
+import actors.Messages.FileEventMessage._
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.{Actor, ActorRef}
 
 import scala.collection.mutable
+import FileHandlerActor._
+import actors.Messages.EventDataMessage.ModificationDataMsg
 
 class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends Actor{
 
-  type LinesOption = Option[Traversable[String]]
-  private val pathToLines: mutable.Map[Path, LinesOption] = mutable.Map.empty
+//  def mapContains(path: Path): Boolean = pathToLines.contains(path)
+//
+//  def mapContainsValue(lines: LinesOption): Boolean = {
+//    for ((_, value) <- pathToLines) if (value == lines) return true
+//    false
+//  }
+//
+//  def clearMap(): Unit = pathToLines.clear()
 
-  def receive() = {
+
+  //  private val pathToLines: mutable.Map[Path, LinesOption] = mutable.Map.empty
+
+  def receive: Receive = handleMessages(mutable.Map.empty)
+
+  def handleMessages(pathToLines: mutable.Map[Path, LinesOption]): Receive = {
+    //MapQueryMsg
+    case MapContainsKey(path) =>
+      sender() ! pathToLines.contains(path)
+
+    case MapContainsValue(lines) =>
+      for ((_, value) <- pathToLines) if (value == lines) sender() ! true
+        sender() ! false
+
+    case ClearMap => pathToLines.clear()
+
+    //other msgs
     case fileCreateMsg: FileCreatedMsg =>
       println(s"actors.FileHandlerActor got a FileCreatedMsd for path ${fileCreateMsg.file.path}")
       commActor ! fileCreateMsg
@@ -36,13 +59,13 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
       val lines = pathToLines.getOrElse(path, None)
       diffActor ! OldLinesMsg(lines.getOrElse(None), path, patch)
   }
+}
 
-  def mapContains(path: Path): Boolean = pathToLines.contains(path)
+object FileHandlerActor {
+  type LinesOption = Option[Traversable[String]]
 
-  def mapContainsValue(lines: LinesOption): Boolean = {
-    for ((_, value) <- pathToLines) if (value == lines) return true
-    false
-  }
-
-  def clearMap(): Unit = pathToLines.clear()
+  sealed trait MapQueryMsg
+  case class MapContainsKey(path: Path) extends MapQueryMsg
+  case class MapContainsValue(lines: LinesOption) extends MapQueryMsg
+  case class ClearMap() extends MapQueryMsg
 }

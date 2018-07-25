@@ -1,5 +1,6 @@
 package actors
 
+import actors.FileHandlerActor.{ClearMap, MapContainsKey}
 import actors.Messages.EventDataMessage.ModificationDataMsg
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
@@ -26,8 +27,9 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
   }
 
   after {
+    fileHandler.tell(ClearMap, probe.ref)
     fileHandler = null
-    actor.clearMap()
+//    actor.clearMap()
     actor = null
     probe = null
   }
@@ -59,10 +61,12 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       val msg = FileCreatedMsg(fileToSend)
       fileHandler.tell(msg, probe.ref)
 
-      actor.mapContains(fileToSend.path) should be (false)
-
       //clear the message from the queue
       expectMsgType[FileCreatedMsg]
+
+//      actor.mapContains(fileToSend.path) should be (false)
+      fileHandler.tell(MapContainsKey(fileToSend.path), testActor)
+      expectMsg(false)
     }
   }
 
@@ -72,11 +76,12 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       val msg = FileModifiedMsg(fileToSend)
       fileHandler.tell(msg, probe.ref)
 
-      actor.mapContains(fileToSend.path) should be (true)
-
       //clear the message from the queue
       expectMsgType[ModificationDataMsg]
 
+      //      actor.mapContains(fileToSend.path) should be (true)
+      fileHandler.tell(MapContainsKey(fileToSend.path), testActor)
+      expectMsg(true)
     }
   }
 
@@ -108,10 +113,11 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       val msg = FileDeletedMsg(fileToSend)
       fileHandler.tell(msg, probe.ref)
 
-      actor.mapContains(fileToSend.path) should be (false)
-
       //clear the message from the queue
       expectMsgType[FileDeletedMsg]
+
+      fileHandler.tell(MapContainsKey(fileToSend.path), testActor)
+      expectMsg(false)
     }
   }
 
@@ -149,6 +155,12 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       expectMsg(OldLinesMsg(List(TEXT_IN_FILE), fileToSend.path, patch))
     }
   }
+
+//  it must {
+//    "update it's map when receiving an UpdateFileMsg for the first time" in {
+//
+//    }
+//  }
 
 }
 
