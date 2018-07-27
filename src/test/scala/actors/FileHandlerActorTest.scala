@@ -171,7 +171,17 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   it must {
     "create the file(path) with lines when receiving an UpdateFileMsg(path, lines) for the first time" in {
+      val newFile = File.currentWorkingDirectory / "src" / "test" / "resources" / "someOtherFile.txt"
+      val newPath = newFile.path
+      val newLines = List("lines for the new file", "and another one")
+      fileHandler ! UpdateFileMsg(newPath, newLines)
 
+      expectNoMessage(Duration.apply(3, TimeUnit.SECONDS))
+
+      assert(newFile.exists)
+      assert(newFile.lines == newLines)
+
+      newFile.deleteOnExit()
     }
   }
 
