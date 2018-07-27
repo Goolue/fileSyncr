@@ -24,29 +24,25 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   private var diffActor: TestActorRef[DiffActor] = _
   private var newLines: List[String] = _
   private var path: Path = _
-  private var probe: TestProbe = _
 
   before {
-    val (diffActor, newLines, path, probe) = createDiffActorPathNewLinesAndProbe
+    val (diffActor, newLines, path) = createDiffActorPathNewLinesAndProbe
     this.diffActor = diffActor
     this.newLines = newLines
     this.path = path
-    this.probe = probe
   }
 
   after {
     diffActor = null
     newLines = null
     path = null
-    probe = null
   }
 
   private def createDiffActorPathNewLinesAndProbe = {
     val diffActor = TestActorRef[DiffActor](Props(new DiffActor(testActor, testActor)))
     val newLines = List("first line", "second line", "third line")
     val path = File.home.path
-    val probe = new TestProbe(system)
-    (diffActor, newLines, path, probe)
+    (diffActor, newLines, path)
   }
 
   override def afterAll {
@@ -57,7 +53,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   "A DiffActor" must {
     "send a DiffEventMsg(path, newLines added) when receiving a ModificationDataMsg(path, newLines, null)" in {
       val modMsg = ModificationDataMsg(path, newLines)
-      diffActor.tell(modMsg, probe.ref)
+      diffActor ! modMsg
 
       val patch: Patch[String] = DiffUtils.diff(List[String]().asJava, newLines.asJava)
       val diffMsg = DiffEventMsg(path, patch)
@@ -75,7 +71,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     "send a DiffEventMsg(path, diff) when receiving a ModificationDataMsg(path, newLines, oldLines != null)" in {
       val oldLines = List("first line", "second line", "Im a different third line", "forth line")
       val modMsg = ModificationDataMsg(path, newLines, Some(oldLines))
-      diffActor.tell(modMsg, probe.ref)
+      diffActor ! modMsg
 
       val patch: Patch[String] = DiffUtils.diff(oldLines.asJava, newLines.asJava)
       val diffMsg = DiffEventMsg(path, patch)
@@ -95,7 +91,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       val patch: StringPatch = DiffUtils.diff(List[String]().asJava, newLines.asJava)
       val applyPatchMsg = ApplyPatchMsg(path, patch)
 
-      diffActor.tell(applyPatchMsg, probe.ref)
+      diffActor ! applyPatchMsg
 
       val getterMsg = GetLinesMsg(path, patch)
 
@@ -113,7 +109,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       val patch: StringPatch = DiffUtils.diff(oldLines.asJava, newLines.asJava)
       val oldLinesMsg = OldLinesMsg(oldLines, path, patch)
 
-      diffActor.tell(oldLinesMsg, probe.ref)
+      diffActor ! oldLinesMsg
 
       expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
         case UpdateFileMsg(expectedPath, expectedLines) =>

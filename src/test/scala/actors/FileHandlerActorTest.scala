@@ -1,7 +1,9 @@
 package actors
 
-import actors.FileHandlerActor.MapContainsKey
-import actors.Messages.EventDataMessage.ModificationDataMsg
+import java.util.concurrent.TimeUnit
+
+import actors.FileHandlerActor.{MapContainsKey, MapContainsValue}
+import actors.Messages.EventDataMessage.{ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -10,12 +12,15 @@ import better.files.File
 import com.github.difflib.patch.Patch
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpecLike}
 
+import scala.concurrent.duration.Duration
+
 class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter{
 
   val TEXT_IN_FILE = "some text here"
 
   var fileHandler: ActorRef = _
+  val file: File = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
 
   before {
     this.fileHandler = system.actorOf(Props(new FileHandlerActor(testActor, testActor)))
@@ -23,6 +28,8 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   after {
     fileHandler = null
+    //revert changes to someFile.txt
+    file.write(TEXT_IN_FILE)
   }
 
   override def afterAll {
@@ -140,11 +147,37 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
     }
   }
 
-//  it must {
-//    "update it's map when receiving an UpdateFileMsg for the first time" in {
-//
-//    }
-//  }
+  it must {
+    "update it's map when receiving an UpdateFileMsg for the first time" in {
+      val path = file.path
+      //check that the map does not contain the path
+      fileHandler ! MapContainsKey(path)
+      expectMsg(false)
+
+      //send the msg
+      val lines = List("some new lines")
+      val updateMsg = UpdateFileMsg(path, lines)
+      fileHandler ! updateMsg
+
+      expectNoMessage(Duration.apply(3, TimeUnit.SECONDS))
+
+      //check if the map was updated
+      fileHandler ! MapContainsKey(path)
+      expectMsg(true)
+      fileHandler ! MapContainsValue(Some(lines))
+      expectMsg(true)
+    }
+  }
+
+  it must {
+    "NOT do anything when receiving an UpdateFileMsg for a dir" in {
+      val path = File.home.path
+      val updateMsg = UpdateFileMsg(path, null)
+      fileHandler ! updateMsg
+
+      expectNoMessage
+    }
+  }
 
 }
 

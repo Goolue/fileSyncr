@@ -2,13 +2,13 @@ package actors
 
 import java.nio.file.Path
 
+import actors.FileHandlerActor._
+import actors.Messages.EventDataMessage.{ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.FileEventMessage._
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.{Actor, ActorRef}
-
-import scala.collection.mutable
-import FileHandlerActor._
-import actors.Messages.EventDataMessage.ModificationDataMsg
+import better.files.File
+import better.files.File.RandomAccessMode
 
 class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends Actor{
 
@@ -20,8 +20,7 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
       sender() ! pathToLines.contains(path)
 
     case MapContainsValue(lines) =>
-      for ((_, value) <- pathToLines) if (value == lines) sender() ! true
-        sender() ! false
+      sender() ! pathToLines.values.exists(_ == lines)
 
     //other msgs
     case fileCreateMsg: FileCreatedMsg =>
@@ -44,6 +43,33 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
       println(s"actors.FileHandlerActor got a GetLinesMsg for path $path")
       val lines = pathToLines.getOrElse(path, None)
       diffActor ! OldLinesMsg(lines.getOrElse(None), path, patch)
+
+    case UpdateFileMsg(path, lines) =>
+      println(s"actors.FileHandlerActor got a UpdateFileMsg for path $path")
+      //update the file
+      val file = File.apply(path)
+      if (file.isDirectory) println(s"FileHandlerActor got an UpdateFileMsg for dir in path $path")
+      else {
+        file.usingLock(RandomAccessMode.readWrite)(fileChan => {
+          val lock = fileChan.lock()
+          file.clear()
+          lines.foreach(line => file.append(line))
+          lock.release()
+        })
+        //update the map
+        context become handleMessages(pathToLines.updated(path, Some(lines)))
+      }
+  }
+
+
+  def nanoToMilli(nano: Long): Long = nano / 1000000
+
+  def time[R](block: => R): R = {
+    val t0 = System.nanoTime()
+    val result = block    // call-by-name
+    val t1 = System.nanoTime()
+    println("Elapsed time: " + nanoToMilli(t1 - t0) + "ms")
+    result
   }
 }
 
