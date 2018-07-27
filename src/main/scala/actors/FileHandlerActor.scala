@@ -50,6 +50,7 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
       val file = File.apply(path)
       if (file.isDirectory) println(s"FileHandlerActor got an UpdateFileMsg for dir in path $path")
       else {
+        file.createIfNotExists()
         file.usingLock(RandomAccessMode.readWrite)(fileChan => {
           val lock = fileChan.lock()
           file.clear()

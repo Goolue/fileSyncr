@@ -1,7 +1,9 @@
-import java.nio.file.{Paths, StandardWatchEventKinds => EventType}
+package actors
+
+import java.nio.file.{StandardWatchEventKinds => EventType}
 
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem}
 import better.files.FileWatcher._
 import better.files._
 
@@ -9,9 +11,10 @@ import better.files._
 // https://github.com/pathikrit/better-files/tree/master/akka
 // https://github.com/pathikrit/better-files#akka-file-watcher
 
-class FileWatcherConfigurer(val actorSystem: ActorSystem, val fileHandler: ActorRef, val pathStr: String) {
+class FileWatcherConfigurer(val actorSystem: ActorSystem, val fileHandler: ActorRef, val fileToWatch: File) {
 
-    val watcher: ActorRef = actorSystem.actorOf(Props(new FileWatcher(Paths.get(pathStr))))
+    println(s"watching $fileToWatch")
+    val watcher: ActorRef = fileToWatch.newWatcher()(actorSystem)
     watcher ! when(events = EventType.ENTRY_CREATE, EventType.ENTRY_MODIFY, EventType.ENTRY_DELETE) {
       case (EventType.ENTRY_CREATE, file) =>
         println(s"$file got created")
@@ -23,9 +26,4 @@ class FileWatcherConfigurer(val actorSystem: ActorSystem, val fileHandler: Actor
         println(s"$file got deleted")
         fileHandler ! FileDeletedMsg(file)
     }
-
-  private def when(events: Event*)(callback: Callback): Message = {
-    Message.RegisterCallback(events.distinct, callback)
-  }
-
 }
