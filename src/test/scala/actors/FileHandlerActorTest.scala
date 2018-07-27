@@ -47,7 +47,6 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   it must {
     "NOT add the path of the file to it's map when receiving a FileCreatedMsg" in {
-//      val (fileHandler: TestActorRef[actors.FileHandlerActor], actor: actors.FileHandlerActor, probe: TestProbe) = createFileHandlerActorAndProbe
       val fileToSend = File.home
       val msg = FileCreatedMsg(fileToSend)
       fileHandler ! msg
@@ -55,7 +54,6 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       //clear the message from the queue
       expectMsgType[FileCreatedMsg]
 
-//      actor.mapContains(fileToSend.path) should be (false)
       fileHandler.tell(MapContainsKey(fileToSend.path), testActor)
       expectMsg(false)
     }
@@ -63,15 +61,13 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   it must {
     "update it's map when receiving a FileModifiedMsg" in {
-      val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
-      val msg = FileModifiedMsg(fileToSend)
+      val msg = FileModifiedMsg(file)
       fileHandler ! msg
 
       //clear the message from the queue
       expectMsgType[ModificationDataMsg]
 
-      //      actor.mapContains(fileToSend.path) should be (true)
-      fileHandler.tell(MapContainsKey(fileToSend.path), testActor)
+      fileHandler.tell(MapContainsKey(file.path), testActor)
       expectMsg(true)
     }
   }
@@ -79,13 +75,12 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
   it must {
     "send a ModificationDataMsg with the correct path, None old lines, and new lines when " +
     "receiving a FileModifiedMsg for the first time" in {
-      val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
-      val msg = FileModifiedMsg(fileToSend)
+      val msg = FileModifiedMsg(file)
       fileHandler ! msg
 
       val expectedNewLines = Traversable[String](TEXT_IN_FILE)
       val expectedOldLines = None
-      val expecedPath = fileToSend.path
+      val expecedPath = file.path
 
       expectMsg(ModificationDataMsg(expecedPath, expectedNewLines, expectedOldLines))
     }
@@ -93,36 +88,32 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   it must {
     "NOT have the path of the file to it's map when receiving a FileDeletedMsg" in {
-      val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
-
       //send a file mod msg so the path will be in the map
-      val modMsg = FileModifiedMsg(fileToSend)
+      val modMsg = FileModifiedMsg(file)
       fileHandler ! modMsg
       //clear the message from the queue
       expectMsgType[ModificationDataMsg]
 
-      val msg = FileDeletedMsg(fileToSend)
+      val msg = FileDeletedMsg(file)
       fileHandler ! msg
 
       //clear the message from the queue
       expectMsgType[FileDeletedMsg]
 
-      fileHandler.tell(MapContainsKey(fileToSend.path), testActor)
+      fileHandler.tell(MapContainsKey(file.path), testActor)
       expectMsg(false)
     }
   }
 
   it must {
     "send the same FileDeletedMsg to the commActor when receiving a FileDeletedMsg" in {
-      val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
-
       //send a file mod msg so the path will be in the map
-      val modMsg = FileModifiedMsg(fileToSend)
+      val modMsg = FileModifiedMsg(file)
       fileHandler ! modMsg
       //clear the message from the queue
       expectMsgType[ModificationDataMsg]
 
-      val msg = FileDeletedMsg(fileToSend)
+      val msg = FileDeletedMsg(file)
       fileHandler ! msg
 
       expectMsg(msg)
@@ -133,17 +124,16 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
     "send an OldLinesMsg(lines, path, patch) when receiving a GetLinesMsg(path, patch)" in {
 
       //send a file mod msg so the path will be in the map
-      val fileToSend = File.currentWorkingDirectory / "src" / "test" / "resources" / "someFile.txt"
-      val modMsg = FileModifiedMsg(fileToSend)
+      val modMsg = FileModifiedMsg(file)
       fileHandler ! modMsg
       //clear the message from the queue
       expectMsgType[ModificationDataMsg]
 
       val patch: Patch[String] = new Patch()
-      val getLinesMsg = GetLinesMsg(fileToSend.path, patch)
+      val getLinesMsg = GetLinesMsg(file.path, patch)
       fileHandler ! getLinesMsg
 
-      expectMsg(OldLinesMsg(List(TEXT_IN_FILE), fileToSend.path, patch))
+      expectMsg(OldLinesMsg(List(TEXT_IN_FILE), file.path, patch))
     }
   }
 
@@ -176,6 +166,12 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       fileHandler ! updateMsg
 
       expectNoMessage
+    }
+  }
+
+  it must {
+    "create the file(path) with lines when receiving an UpdateFileMsg(path, lines) for the first time" in {
+
     }
   }
 
