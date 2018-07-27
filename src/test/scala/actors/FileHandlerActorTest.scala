@@ -109,7 +109,6 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
     }
 
     "send an OldLinesMsg(lines, path, patch) when receiving a GetLinesMsg(path, patch)" in {
-
       //send a file mod msg so the path will be in the map
       val modMsg = FileModifiedMsg(file)
       fileHandler ! modMsg
@@ -134,12 +133,45 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       val updateMsg = UpdateFileMsg(path, lines)
       fileHandler ! updateMsg
 
-      expectNoMessage(Duration.apply(3, TimeUnit.SECONDS))
+      expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
 
       //check if the map was updated
       fileHandler ! MapContainsKey(path)
       expectMsg(true)
       fileHandler ! MapContainsValue(Some(lines))
+      expectMsg(true)
+    }
+
+    "update it's map when receiving an UpdateFileMsg NOT for the first time" in {
+      val path = file.path
+      //check that the map does not contain the path
+      fileHandler ! MapContainsKey(path)
+      expectMsg(false)
+
+      //send first msg
+      val lines = List("some new lines")
+      val firstUpdateMsg = UpdateFileMsg(path, lines)
+      fileHandler ! firstUpdateMsg
+
+      expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
+
+      //check if the map was updated
+      fileHandler ! MapContainsKey(path)
+      expectMsg(true)
+      fileHandler ! MapContainsValue(Some(lines))
+      expectMsg(true)
+
+      //send the 2nd msg
+      val newLines = List("some new lines")
+      val updateMsg = UpdateFileMsg(path, newLines)
+      fileHandler ! updateMsg
+
+      expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
+
+      //check if the map was updated
+      fileHandler ! MapContainsKey(path)
+      expectMsg(true)
+      fileHandler ! MapContainsValue(Some(newLines))
       expectMsg(true)
     }
 
