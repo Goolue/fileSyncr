@@ -53,7 +53,7 @@ class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends
         file.usingLock(RandomAccessMode.readWrite)(fileChan => {
           val lock = fileChan.lock()
           file.clear()
-          lines.foreach(line => file.append(line))
+          file.appendLines(lines.toArray: _*)
           lock.release()
         })
         //update the map

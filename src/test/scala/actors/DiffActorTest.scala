@@ -65,9 +65,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
         case _ => false
       }
     }
-  }
 
-  it must {
     "send a DiffEventMsg(path, diff) when receiving a ModificationDataMsg(path, newLines, oldLines != null)" in {
       val oldLines = List("first line", "second line", "Im a different third line", "forth line")
       val modMsg = ModificationDataMsg(path, newLines, Some(oldLines))
@@ -84,9 +82,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
         case _ => false
       }
     }
-  }
 
-  it must {
     "send a GetLinesMsg(path, patch) when receiving an ApplyPatchMsg(path, patch)" in {
       val patch: StringPatch = DiffUtils.diff(List[String]().asJava, newLines.asJava)
       val applyPatchMsg = ApplyPatchMsg(path, patch)
@@ -101,9 +97,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
         case _ => false
       }
     }
-  }
 
-  it must {
     "send a UpdateFileMsg(path, patch(lines)) when receiving an OldLinesMsg(lines, path, patch)" in {
       val oldLines = List[String]("first line", "some other line")
       val patch: StringPatch = DiffUtils.diff(oldLines.asJava, newLines.asJava)
