@@ -10,7 +10,7 @@ import akka.actor.{Actor, ActorRef}
 import better.files.File
 import better.files.File.RandomAccessMode
 
-class FileHandlerActor(val diffActor: ActorRef, val commActor: ActorRef) extends Actor{
+class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends Actor{
 
   def receive: Receive = handleMessages(Map.empty)
 
