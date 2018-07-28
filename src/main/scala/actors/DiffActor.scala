@@ -10,19 +10,19 @@ import scala.collection.JavaConverters._
 class DiffActor(commActor: => ActorRef, fileHandler : => ActorRef) extends Actor {
   def receive(): PartialFunction[Any, Unit] = {
     case ModificationDataMsg(path, newLines, oldLines) =>
-      println("got a ModificationDataMsg")
+      context.system.log.info("got a ModificationDataMsg")
       val oldLinesValue = oldLines.getOrElse(List())
       val patch = DiffUtils.diff(oldLinesValue.toList.asJava, newLines.toList.asJava)
       commActor ! DiffEventMsg(path, patch)
 
     case ApplyPatchMsg(path, patch) =>
-      println("got an ApplyPatchMsg")
+      context.system.log.info("got an ApplyPatchMsg")
       fileHandler ! GetLinesMsg(path, patch)
 
     case OldLinesMsg(oldLines, path, patch) =>
-      println("got an OldLinesMsg")
+      context.system.log.info("got an OldLinesMsg")
       fileHandler ! UpdateFileMsg(path, patch.applyTo(oldLines.toList.asJava).asScala)
 
-    case _ => println("got an unexpected msg!")
+    case _ => context.system.log.info("got an unexpected msg!")
   }
 }
