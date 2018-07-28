@@ -4,6 +4,7 @@ scalaVersion := "2.12.6"
 
 val betterFilesVersion = "3.5.0"
 
+libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.5.14"
 libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.5.14"
 libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % "2.5.14" % Test
 libraryDependencies += "com.github.wumpz" % "diffutils" % "2.2"

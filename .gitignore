@@ -1,9 +1,5 @@
 
-project/target/streams/compile/compileIncSetup/
 /.idea/
-
-target/scala-2\.12/classes/
-
 *.class
-
-target/scala-2\.12/test-classes/
+/target/
+/project/
