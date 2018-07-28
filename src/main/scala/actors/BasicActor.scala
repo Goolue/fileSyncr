@@ -15,4 +15,14 @@ abstract class BasicActor extends Actor with ActorLogging {
       reason.getMessage, message.getOrElse(""))
   }
 
+  //measuring elapsed time of a code block
+  private def nanoToMilli(nano: Long): Long = nano / 1000000
+  def time[R](block: => R): R = {
+    val t0 = System.nanoTime()
+    val result = block    // call-by-name
+    val t1 = System.nanoTime()
+    log.info("Elapsed time: " + nanoToMilli(t1 - t0) + "ms")
+    result
+  }
+
 }

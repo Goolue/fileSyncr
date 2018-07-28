@@ -6,7 +6,7 @@ import actors.FileHandlerActor._
 import actors.Messages.EventDataMessage.{ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.FileEventMessage._
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor.ActorRef
 import better.files.File
 import better.files.File.RandomAccessMode
 
@@ -62,16 +62,6 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends B
       }
   }
 
-
-  def nanoToMilli(nano: Long): Long = nano / 1000000
-
-  def time[R](block: => R): R = {
-    val t0 = System.nanoTime()
-    val result = block    // call-by-name
-    val t1 = System.nanoTime()
-    log.info("Elapsed time: " + nanoToMilli(t1 - t0) + "ms")
-    result
-  }
 }
 
 object FileHandlerActor {
