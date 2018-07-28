@@ -8,7 +8,7 @@ abstract class BasicActor extends Actor with ActorLogging {
     log.info(s"$getClassName Starting")
   }
 
-  private def getClassName = this.getClass.getSimpleName
+  def getClassName: String = this.getClass.getSimpleName
 
   override def preRestart(reason: Throwable, message: Option[Any]) {
     log.error(reason, s"$getClassName Restarting due to [{}] when processing [{}]",

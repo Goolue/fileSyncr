@@ -15,7 +15,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends B
   def receive: Receive = handleMessages(Map.empty)
 
   def handleMessages(pathToLines: Map[Path, LinesOption]): Receive = {
-    //MapQueryMsg
+    //MapQueryMsg, mostly used for testing
     case MapContainsKey(path) =>
       sender() ! pathToLines.contains(path)
 
@@ -31,8 +31,13 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends B
       log.info(s"actors.FileHandlerActor got a FileModifiedMsg for path ${file.path}")
       val oldLines = pathToLines.getOrElse[LinesOption](file.path, None)
       val newLines = file.lines
-      diffActor ! ModificationDataMsg(file.path, newLines, oldLines)
-      context become handleMessages(pathToLines.updated(file.path, Some(newLines)))
+      if (oldLines != newLines) {
+        diffActor ! ModificationDataMsg(file.path, newLines, oldLines)
+        context become handleMessages(pathToLines.updated(file.path, Some(newLines)))
+      }
+      else {
+        log.warning(s"$getClassName got a FileModifiedMsg with no change or file $file")
+      }
 
     case fileDeletedMsg: FileDeletedMsg =>
       log.info(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.file.path}")
@@ -41,8 +46,13 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends B
 
     case GetLinesMsg(path, patch) =>
       log.info(s"actors.FileHandlerActor got a GetLinesMsg for path $path")
-      val lines = pathToLines.getOrElse(path, None)
-      diffActor ! OldLinesMsg(lines.getOrElse(None), path, patch)
+      if (!patch.getDeltas.isEmpty) {
+        val lines = pathToLines.getOrElse(path, None)
+        diffActor ! OldLinesMsg(lines.getOrElse(None), path, patch)
+      }
+      else {
+        log.warning(s"$getClassName got an empty patch in a GetLinesMsg for path $path")
+      }
 
     case UpdateFileMsg(path, lines) =>
       log.info(s"actors.FileHandlerActor got a UpdateFileMsg for path $path")

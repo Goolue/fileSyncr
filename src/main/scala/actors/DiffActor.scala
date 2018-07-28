@@ -16,12 +16,22 @@ class DiffActor(commActor: => ActorRef, fileHandler : => ActorRef) extends Basic
       commActor ! DiffEventMsg(path, patch)
 
     case ApplyPatchMsg(path, patch) =>
-      context.system.log.info("got an ApplyPatchMsg")
-      fileHandler ! GetLinesMsg(path, patch)
+      context.system.log.info(s"got an ApplyPatchMsg for path $path")
+      if (!patch.getDeltas.isEmpty) {
+        fileHandler ! GetLinesMsg(path, patch)
+      }
+      else {
+        log.warning(s"$getClassName got an empty patch in an ApplyPatchMsg for path $path")
+      }
 
     case OldLinesMsg(oldLines, path, patch) =>
       context.system.log.info("got an OldLinesMsg")
-      fileHandler ! UpdateFileMsg(path, patch.applyTo(oldLines.toList.asJava).asScala)
+      if (!patch.getDeltas.isEmpty) {
+        fileHandler ! UpdateFileMsg(path, patch.applyTo(oldLines.toList.asJava).asScala)
+      }
+      else {
+        log.warning(s"$getClassName got an empty patch in an OldLinesMsg for path $path")
+      }
 
     case _ => context.system.log.info("got an unexpected msg!")
   }
