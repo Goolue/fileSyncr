@@ -2,7 +2,7 @@ package actors
 
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg, ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
-import akka.actor.{Actor, ActorRef}
+import akka.actor.ActorRef
 import com.github.difflib.DiffUtils
 
 import scala.collection.JavaConverters._

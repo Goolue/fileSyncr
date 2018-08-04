@@ -9,8 +9,10 @@ import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
+import com.github.difflib.DiffUtils
 import com.github.difflib.patch.Patch
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpecLike}
+import scala.collection.JavaConverters._
 
 import scala.concurrent.duration.Duration
 
@@ -115,7 +117,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       //clear the message from the queue
       expectMsgType[ModificationDataMsg]
 
-      val patch: Patch[String] = new Patch()
+      val patch: Patch[String] = DiffUtils.diff(List.empty[String].asJava, List("bla").asJava)
       val getLinesMsg = GetLinesMsg(file.path, patch)
       fileHandler ! getLinesMsg
 
