@@ -1,25 +1,24 @@
 package actors
 
 import actors.CommActor.{AddRemoteConnectionMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
+import actors.Messages.FileEventMessage.FileDeletedMsg
 import akka.actor.ActorSelection
-import akka.routing.{BroadcastRoutingLogic, Router}
+import akka.routing.{BroadcastRoutingLogic, Routee, Router}
 
 class CommActor extends BasicActor {
   def receive: Receive = handleMassages(Map.empty)
 
   private val protocol = "akka.tcp"
 
-  private var router = {
-    Router(BroadcastRoutingLogic(), Vector.empty)
-  }
+  private var router: Router = Router(BroadcastRoutingLogic(), Vector.empty[Routee])
 
   def handleMassages(connections: Map[String, ActorSelection]): Receive = {
     case HasConnectionQuery(url) =>
       log.info(s"$getClassName got an HasConnectionQuery for url $url")
       sender() ! connections.contains(url)
 
-    case AddRemoteConnectionMsg(url, port, actorClass) =>
-      log.info(s"$getClassName got an AddRemoteConnectionMsg for url $url, port $port, actor $actorClass")
+    case AddRemoteConnectionMsg(url, port, actorPathStr) =>
+      log.info(s"$getClassName got an AddRemoteConnectionMsg for url $url, port $port, actor $actorPathStr")
       if (port <= 0) log.warning(s"port $port <= 0 !")
       else {
         url match {
@@ -27,7 +26,7 @@ class CommActor extends BasicActor {
           case "" => log.info(s"$getClassName got an empty url")
           case _ =>
             if (!connections.contains(url) && isValidUrl(url)) {
-              val selection = context.actorSelection(createRemotePath(url, port, actorClass))
+              val selection = context.actorSelection(createRemotePath(url, port, actorPathStr))
               router = router.addRoutee(selection)
               context become handleMassages(connections.updated(url, selection))
             }
@@ -42,9 +41,15 @@ class CommActor extends BasicActor {
         context become handleMassages(connections - url)
       }
 
+    case fileDeletedMsg: FileDeletedMsg =>
+      val file = fileDeletedMsg.file
+      log.info(s"$getClassName got an FileDeletedMsg for file $file, routing to ${router.routees.size} routees")
+      router.route(fileDeletedMsg, context.self)
+
+    //TODO more msgs
+
     case msg => log.warning(s"$getClassName got an unidentified msg $msg")
 
-      //TODO more msgs
   }
 
   private def isValidUrl(url: String) = {

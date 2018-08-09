@@ -3,8 +3,11 @@ package actors
 import java.util.concurrent.TimeUnit
 
 import actors.CommActor.{AddRemoteConnectionMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
+import actors.Messages.FileEventMessage.FileDeletedMsg
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
+import better.files.File
+import com.sun.jndi.cosnaming.IiopUrl.Address
 import org.scalatest._
 
 import scala.concurrent.duration.Duration
@@ -13,9 +16,11 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
 
   var commActor: ActorRef = _
+//  val DEFAULT_PORT = 1000
+  val DEFAULT_PORT = 2552
 
   before {
-    commActor = system.actorOf(Props(new CommActor()))
+    commActor = system.actorOf(Props(new CommActor()), "commActor")
   }
 
   after {
@@ -49,7 +54,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       expectMsg(true)
     }
 
-    "NOT add url to it's map when receiving a AddRemoteConnectionMsg(url, _, _) with an empty url" in {
+    "NOT add url to it's map when receiving a AddRactorClassemoteConnectionMsg(url, _, _) with an empty url" in {
       val url = ""
       commActor ! AddRemoteConnectionMsg(url, 1000, "commActor")
 
@@ -109,6 +114,14 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       expectMsg(true)
       commActor ! HasConnectionQuery(someOtherUrl)
       expectMsg(false)
+    }
+
+    "forward the msg when receiving a FileDeletedMsg" in {
+      commActor ! AddRemoteConnectionMsg("127.0.0.1", DEFAULT_PORT, testActor.path.toStringWithoutAddress)
+
+      val msg = FileDeletedMsg(File.currentWorkingDirectory)
+      commActor ! msg
+      expectMsg(msg)
     }
   }
 
