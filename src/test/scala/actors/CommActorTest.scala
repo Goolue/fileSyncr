@@ -2,35 +2,38 @@ package actors
 
 import java.util.concurrent.TimeUnit
 
-import actors.CommActor.{AddRemoteConnectionMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
+import actors.CommActor.{AddRemoteConnectionMsg, DisconnectMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
+import actors.Messages.EventDataMessage.DiffEventMsg
 import actors.Messages.FileEventMessage.FileDeletedMsg
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
-import com.sun.jndi.cosnaming.IiopUrl.Address
+import com.github.difflib.DiffUtils
+import com.github.difflib.patch.Patch
 import org.scalatest._
 
 import scala.concurrent.duration.Duration
+import scala.collection.JavaConverters._
 
 class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
 
   var commActor: ActorRef = _
-//  val DEFAULT_PORT = 1000
   val DEFAULT_PORT = 2552
+  val localhostUrl = "127.0.0.1"
 
   before {
-    commActor = system.actorOf(Props(new CommActor()), "commActor")
+    commActor = system.actorOf(Props(new CommActor(localhostUrl)), "commActor")
   }
 
   after {
     commActor = null
   }
 
+
   override def afterAll {
     TestKit.shutdownActorSystem(system)
   }
-
   "CommActor" must {
     "add url to it's map when receiving a AddRemoteConnectionMsg(url) with a valid numeric url" in {
       val url = "127.0.0.1"
@@ -42,6 +45,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
       expectMsg(true)
     }
+
 
     "add url to it's map when receiving a AddRemoteConnectionMsg(url, _, _) with a valid non-numeric url" in {
       val url = "localhost"
@@ -117,12 +121,30 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     }
 
     "forward the msg when receiving a FileDeletedMsg" in {
-      commActor ! AddRemoteConnectionMsg("127.0.0.1", DEFAULT_PORT, testActor.path.toStringWithoutAddress)
+      commActor ! AddRemoteConnectionMsg(localhostUrl, DEFAULT_PORT, testActor.path.toStringWithoutAddress)
 
-      val msg = FileDeletedMsg(File.currentWorkingDirectory)
+      val msg = FileDeletedMsg(File.currentWorkingDirectory, isRemote = true)
       commActor ! msg
+
       expectMsg(msg)
+
+      commActor ! DisconnectMsg(Some("manual shutdown"))
     }
+
+    "forward the msg when receiving a DiffEventMsg with isRemote = true" in {
+      commActor ! AddRemoteConnectionMsg(localhostUrl, DEFAULT_PORT, testActor.path.toStringWithoutAddress)
+
+      val patch: Patch[String] = DiffUtils.diff(List[String]().asJava, List[String]().asJava)
+
+      val msg = DiffEventMsg(File.currentWorkingDirectory.path, patch, isRemote = true)
+      commActor ! msg
+
+      expectMsg(msg)
+
+      commActor ! DisconnectMsg(Some("manual shutdown"))
+    }
+
+    //TODO test receiving DiffEvemtMsg with isRemote = false
   }
 
 }

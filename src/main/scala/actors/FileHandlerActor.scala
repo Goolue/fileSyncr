@@ -24,23 +24,27 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends B
 
     //other msgs
     case fileCreateMsg: FileCreatedMsg =>
-      log.info(s"actors.FileHandlerActor got a FileCreatedMsd for path ${fileCreateMsg.file.path}")
+      log.info(s"actors.FileHandlerActor got a FileCreatedMsd for path ${fileCreateMsg.file.path}, " +
+        s"isRemote? ${fileCreateMsg.isRemote}")
       commActor ! fileCreateMsg
 
-    case FileModifiedMsg(file) =>
-      log.info(s"actors.FileHandlerActor got a FileModifiedMsg for path ${file.path}")
-      val oldLines = pathToLines.getOrElse[LinesOption](file.path, None)
-      val newLines = file.lines
-      if (oldLines != newLines) {
-        diffActor ! ModificationDataMsg(file.path, newLines, oldLines)
-        context become handleMessages(pathToLines.updated(file.path, Some(newLines)))
-      }
-      else {
-        log.warning(s"$getClassName got a FileModifiedMsg with no change or file $file")
+    case FileModifiedMsg(file, isRemote) =>
+      log.info(s"actors.FileHandlerActor got a FileModifiedMsg for path ${file.path}, isRemote? $isRemote")
+      if (!isRemote) {
+        val oldLines = pathToLines.getOrElse[LinesOption](file.path, None)
+        val newLines = file.lines
+        if (oldLines != newLines) {
+          diffActor ! ModificationDataMsg(file.path, newLines, oldLines)
+          context become handleMessages(pathToLines.updated(file.path, Some(newLines)))
+        }
+        else {
+          log.warning(s"$getClassName got a FileModifiedMsg with no change or file $file")
+        }
       }
 
     case fileDeletedMsg: FileDeletedMsg =>
-      log.info(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.file.path}")
+      log.info(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.file.path}" +
+        s"isRemote? ${fileDeletedMsg.isRemote}")
       commActor ! fileDeletedMsg
       context become handleMessages(pathToLines - fileDeletedMsg.file.path)
 

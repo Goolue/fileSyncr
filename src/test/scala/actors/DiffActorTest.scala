@@ -7,7 +7,7 @@ import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg, Modificati
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import actors.Messages.StringPatch
 import akka.actor.{ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
+import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
 import better.files.File
 import com.github.difflib.DiffUtils
 import com.github.difflib.patch.Patch

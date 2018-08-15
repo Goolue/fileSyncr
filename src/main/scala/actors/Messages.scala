@@ -12,16 +12,16 @@ object Messages {
 
   sealed trait FileEventMessage
   object FileEventMessage {
-    case class FileCreatedMsg(file: File) extends FileEventMessage
-    case class FileDeletedMsg(file: File) extends FileEventMessage
-    case class FileModifiedMsg(file: File) extends FileEventMessage
+    case class FileCreatedMsg(file: File, isRemote: Boolean = false) extends FileEventMessage
+    case class FileDeletedMsg(file: File, isRemote: Boolean = false) extends FileEventMessage
+    case class FileModifiedMsg(file: File, isRemote: Boolean = false) extends FileEventMessage
   }
 
   sealed trait EventDataMessage
   object EventDataMessage {
     case class ModificationDataMsg(path: Path, newLines: Traversable[String],
                                    implicit val oldLines: Option[Traversable[String]] = None) extends EventDataMessage
-    case class DiffEventMsg(path: Path, patch: StringPatch) extends EventDataMessage
+    case class DiffEventMsg(path: Path, patch: StringPatch, isRemote: Boolean = false) extends EventDataMessage
     case class ApplyPatchMsg(path: Path, patch: StringPatch) extends EventDataMessage
     case class UpdateFileMsg(path: Path, lines: Traversable[String]) extends EventDataMessage
   }
