@@ -3,8 +3,8 @@ package actors
 import java.util.concurrent.TimeUnit
 
 import actors.CommActor.{AddRemoteConnectionMsg, DisconnectMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
-import actors.Messages.EventDataMessage.{ApplyPatchMsg, DeleteFileMsg, DiffEventMsg}
-import actors.Messages.FileEventMessage.FileDeletedMsg
+import actors.Messages.EventDataMessage.{ApplyPatchMsg, CreateFileMsg, DeleteFileMsg, DiffEventMsg}
+import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
@@ -142,6 +142,30 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
       commActor ! DisconnectMsg(Some("manual shutdown"))
     }
+
+    "forward the msg when receiving a FileCreatedMsg with isRemote = false" in {
+      commActor ! AddRemoteConnectionMsg(localhostUrl, DEFAULT_PORT, testActor.path.toStringWithoutAddress)
+
+      val msg = FileCreatedMsg(File.currentWorkingDirectory)
+      commActor ! msg
+
+      expectMsg(msg)
+
+      commActor ! DisconnectMsg(Some("manual shutdown"))
+    }
+
+    "Send a CreateFileMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
+      commActor ! AddRemoteConnectionMsg(localhostUrl, DEFAULT_PORT, testActor.path.toStringWithoutAddress)
+
+      val file = File.currentWorkingDirectory
+      val msg = FileCreatedMsg(file, isRemote = true)
+      commActor ! msg
+
+      expectMsg(CreateFileMsg(file.path))
+
+      commActor ! DisconnectMsg(Some("manual shutdown"))
+    }
+
 
     "forward the msg when receiving a DiffEventMsg with isRemote = false" in {
       commActor ! AddRemoteConnectionMsg(localhostUrl, DEFAULT_PORT, testActor.path.toStringWithoutAddress)

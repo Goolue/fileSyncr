@@ -1,8 +1,8 @@
 package actors
 
 import actors.CommActor._
-import actors.Messages.EventDataMessage.{ApplyPatchMsg, DeleteFileMsg, DiffEventMsg}
-import actors.Messages.FileEventMessage.FileDeletedMsg
+import actors.Messages.EventDataMessage.{ApplyPatchMsg, CreateFileMsg, DeleteFileMsg, DiffEventMsg}
+import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
 import akka.actor.{ActorRef, ActorSelection}
 import akka.routing.{BroadcastRoutingLogic, Routee, Router}
 
@@ -58,6 +58,18 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
             s"ending DeleteFileMsg to fileHandler")
           fileHandlerActor ! DeleteFileMsg(file.path)
         }
+
+    case fileCreatedMsg : FileCreatedMsg =>
+      val file = fileCreatedMsg.file
+      if (!fileCreatedMsg.isRemote) {
+        log.info(s"$getClassName got an FileCreatedMsg for file $file, routing to ${router.routees.size} routees")
+        router.route(fileCreatedMsg, context.self)
+      }
+      else {
+          log.info(s"$getClassName got an FileCreatedMsg for file $file with isRemote = true, s" +
+            s"ending DeleteFileMsg to fileHandler")
+          fileHandlerActor ! CreateFileMsg(file.path)
+      }
 
     case diffEventMsg: DiffEventMsg =>
       val path = diffEventMsg.path
