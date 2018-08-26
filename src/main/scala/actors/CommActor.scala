@@ -1,12 +1,13 @@
 package actors
 
 import actors.CommActor._
-import actors.Messages.EventDataMessage.DiffEventMsg
+import actors.Messages.EventDataMessage.{ApplyPatchMsg, DeleteFileMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.FileDeletedMsg
-import akka.actor.ActorSelection
+import akka.actor.{ActorRef, ActorSelection}
 import akka.routing.{BroadcastRoutingLogic, Routee, Router}
 
-class CommActor(private val url: String) extends BasicActor {
+class CommActor(private val url: String, private val diffActor: ActorRef,
+                private val fileHandlerActor: ActorRef) extends BasicActor {
   def receive: Receive = handleMassages(Map.empty)
 
   private val protocol = "akka.tcp"
@@ -48,19 +49,27 @@ class CommActor(private val url: String) extends BasicActor {
 
     case fileDeletedMsg: FileDeletedMsg =>
       val file = fileDeletedMsg.file
-      log.info(s"$getClassName got an FileDeletedMsg for file $file, routing to ${router.routees.size} routees")
-      router.route(fileDeletedMsg, context.self)
+      if (!fileDeletedMsg.isRemote) {
+        log.info(s"$getClassName got an FileDeletedMsg for file $file, routing to ${router.routees.size} routees")
+        router.route(fileDeletedMsg, context.self)
+      }
+      else {
+          log.info(s"$getClassName got an FileDeletedMsg for file $file with isRemote = true, s" +
+            s"ending DeleteFileMsg to fileHandler")
+          fileHandlerActor ! DeleteFileMsg(file.path)
+        }
 
     case diffEventMsg: DiffEventMsg =>
       val path = diffEventMsg.path
       val isRemote = diffEventMsg.isRemote
       log.info(s"$getClassName got an DiffEventMsg for path $path, isRemote? $isRemote")
-      if (isRemote) {
+      if (!isRemote) {
         log.info(s"$getClassName routing DiffEventMsg for path $path to ${router.routees.size} routees")
         router.route(diffEventMsg, context.self)
       }
       else {
         //TODO ApplyPatchMsg send to DiffActor
+        diffActor ! ApplyPatchMsg(path, diffEventMsg.patch)
       }
 
 
