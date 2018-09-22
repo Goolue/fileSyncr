@@ -3,6 +3,7 @@ package actors
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg, ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.ActorRef
+import better.files.File
 import com.github.difflib.DiffUtils
 
 import scala.collection.JavaConverters._
@@ -27,7 +28,7 @@ class DiffActor(commActor: => ActorRef, fileHandler : => ActorRef) extends Basic
     case OldLinesMsg(oldLines, path, patch) =>
       context.system.log.info("got an OldLinesMsg")
       if (!patch.getDeltas.isEmpty) {
-        fileHandler ! UpdateFileMsg(path, patch.applyTo(oldLines.toList.asJava).asScala)
+        fileHandler ! UpdateFileMsg(path.toString, patch.applyTo(oldLines.toList.asJava).asScala)
       }
       else {
         log.warning(s"$getClassName got an empty patch in an OldLinesMsg for path $path")

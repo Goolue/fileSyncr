@@ -6,6 +6,7 @@ import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileMod
 import akka.actor.{ActorRef, ActorSystem}
 import better.files.FileWatcher._
 import better.files._
+import utils.FileUtils
 
 // References:
 // https://github.com/pathikrit/better-files/tree/master/akka
@@ -18,12 +19,12 @@ class FileWatcherConfigurer(val actorSystem: ActorSystem, val fileHandler: Actor
   watcher ! when(events = EventType.ENTRY_CREATE, EventType.ENTRY_MODIFY, EventType.ENTRY_DELETE) {
     case (EventType.ENTRY_CREATE, file) =>
       actorSystem.log.info(s"$file got created")
-      fileHandler ! FileCreatedMsg(file)
+      fileHandler ! FileCreatedMsg(FileUtils.getFileAsRelativeStr(file))
     case (EventType.ENTRY_MODIFY, file) =>
       actorSystem.log.info(s"$file got modified")
-      fileHandler ! FileModifiedMsg(file)
+      fileHandler ! FileModifiedMsg(FileUtils.getFileAsRelativeStr(file))
     case (EventType.ENTRY_DELETE, file) =>
       actorSystem.log.info(s"$file got deleted")
-      fileHandler ! FileDeletedMsg(file)
+      fileHandler ! FileDeletedMsg(FileUtils.getFileAsRelativeStr(file))
   }
 }

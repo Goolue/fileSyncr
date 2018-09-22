@@ -8,6 +8,8 @@ import akka.routing.{BroadcastRoutingLogic, Routee, Router}
 
 class CommActor(private val url: String, private val diffActor: ActorRef,
                 private val fileHandlerActor: ActorRef) extends BasicActor {
+  println(s"${self.path} created with url $url")
+
   def receive: Receive = handleMassages(Map.empty, Router(BroadcastRoutingLogic(), Vector.empty[Routee]))
 
   private val protocol = "akka.tcp"
@@ -19,7 +21,7 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
       log.info(s"$getClassName got an HasConnectionQuery for msgUrl $msgUrl")
       sender() ! connections.contains(msgUrl)
 
-    case AddRemoteConnectionMsg(msgUrl, port, actorPathStr) =>
+    case AddRemoteConnectionMsg(msgUrl, port, actorPathStr, systemName) =>
       log.info(s"$getClassName got an AddRemoteConnectionMsg for msgUrl $msgUrl, port $port, actor $actorPathStr")
       if (port <= 0) log.warning(s"port $port <= 0 !")
       else {
@@ -28,7 +30,7 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
           case "" => log.info(s"$getClassName got an empty msgUrl")
           case _ =>
             if (!connections.contains(msgUrl) && isValidUrl(msgUrl)) {
-              val selection = context.actorSelection(createRemotePath(msgUrl, port, actorPathStr))
+              val selection = context.actorSelection(createRemotePath(msgUrl, systemName, port, actorPathStr))
 //              router = router.addRoutee(selection)
               context become handleMassages(connections.updated(msgUrl, selection), router.addRoutee(selection))
             }
@@ -48,27 +50,25 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
       router.route(RemoveRemoteConnectionMsg(url, msg), context.self)
 
     case fileDeletedMsg: FileDeletedMsg =>
-      val file = fileDeletedMsg.file
+      val path = fileDeletedMsg.path
       if (!fileDeletedMsg.isRemote) {
-        log.info(s"$getClassName got an FileDeletedMsg for file $file, routing to ${router.routees.size} routees")
+        log.info(s"$getClassName got an FileDeletedMsg for path $path, routing to ${router.routees.size} routees")
         router.route(fileDeletedMsg, context.self)
       }
       else {
-          log.info(s"$getClassName got an FileDeletedMsg for file $file with isRemote = true, s" +
+          log.info(s"$getClassName got an FileDeletedMsg for path $path with isRemote = true, s" +
             s"ending DeleteFileMsg to fileHandler")
-          fileHandlerActor ! DeleteFileMsg(file.path)
+          fileHandlerActor ! DeleteFileMsg(path)
         }
 
-    case fileCreatedMsg : FileCreatedMsg =>
-      val file = fileCreatedMsg.file
-      if (!fileCreatedMsg.isRemote) {
-        log.info(s"$getClassName got an FileCreatedMsg for file $file, routing to ${router.routees.size} routees")
-        router.route(fileCreatedMsg, context.self)
-      }
-      else {
-          log.info(s"$getClassName got an FileCreatedMsg for file $file with isRemote = true, s" +
-            s"ending DeleteFileMsg to fileHandler")
-          fileHandlerActor ! CreateFileMsg(file.path)
+    case FileCreatedMsg(path, isRemote) =>
+      if (isRemote) {
+        log.info(s"$getClassName got an FileCreatedMsg for path $path with isRemote = true, s" +
+          s"ending FileCreatedMsg to fileHandler")
+        fileHandlerActor ! CreateFileMsg(path)
+      } else {
+        log.info(s"$getClassName got an FileCreatedMsg for path $path, routing to ${router.routees.size} routees")
+        router.route(FileCreatedMsg(path, isRemote = true), context.self)
       }
 
     case diffEventMsg: DiffEventMsg =>
@@ -93,14 +93,14 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
     url.forall(c => c.isLetterOrDigit || c == '.')
   }
 
-  private def createRemotePath (url: String, port: Int, actorClass: String): String = {
-    s"$protocol://${context.system.name}@$url:$port/$actorClass"
+  private def createRemotePath (url: String, systemName: Option[String], port: Int, actorClass: String): String = {
+    s"$protocol://${systemName.getOrElse(context.system.name)}@$url:$port$actorClass"
   }
 }
 
 object CommActor {
   sealed class RemoteConnectionMsg
-  case class AddRemoteConnectionMsg(url: String, port: Int, actorClass: String) extends RemoteConnectionMsg
+  case class AddRemoteConnectionMsg(url: String, port: Int, actorClass: String, systemName: Option[String] = None) extends RemoteConnectionMsg
   case class RemoveRemoteConnectionMsg(url: String, msg: Option[String] = None) extends RemoteConnectionMsg
   case class HasConnectionQuery(url: String) extends RemoteConnectionMsg
 

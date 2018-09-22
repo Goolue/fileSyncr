@@ -14,7 +14,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends B
 
   def receive: Receive = handleMessages(Map.empty)
 
-  def handleMessages(pathToLines: Map[Path, LinesOption]): Receive = {
+  def handleMessages(pathToLines: Map[String, LinesOption]): Receive = {
     //MapQueryMsg, mostly used for testing
     case MapContainsKey(path) =>
       sender() ! pathToLines.contains(path)
@@ -24,29 +24,29 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends B
 
     //other msgs
     case fileCreateMsg: FileCreatedMsg =>
-      log.info(s"actors.FileHandlerActor got a FileCreatedMsd for path ${fileCreateMsg.file.path}, " +
+      log.info(s"actors.FileHandlerActor got a FileCreatedMsd for path ${fileCreateMsg.path}, " +
         s"isRemote? ${fileCreateMsg.isRemote}")
       commActor ! fileCreateMsg
 
-    case FileModifiedMsg(file, isRemote) =>
-      log.info(s"actors.FileHandlerActor got a FileModifiedMsg for path ${file.path}, isRemote? $isRemote")
+    case FileModifiedMsg(path, isRemote) =>
+      log.info(s"actors.FileHandlerActor got a FileModifiedMsg for path $path, isRemote? $isRemote")
       if (!isRemote) {
-        val oldLines = pathToLines.getOrElse[LinesOption](file.path, None)
-        val newLines = file.lines
+        val oldLines = pathToLines.getOrElse[LinesOption](path, None)
+        val newLines = File(path).lines
         if (oldLines != newLines) {
-          diffActor ! ModificationDataMsg(file.path, newLines, oldLines)
-          context become handleMessages(pathToLines.updated(file.path, Some(newLines)))
+          diffActor ! ModificationDataMsg(path, newLines, oldLines)
+          context become handleMessages(pathToLines.updated(path, Some(newLines)))
         }
         else {
-          log.warning(s"$getClassName got a FileModifiedMsg with no change or file $file")
+          log.warning(s"$getClassName got a FileModifiedMsg with no change or path $path")
         }
       }
 
     case fileDeletedMsg: FileDeletedMsg =>
-      log.info(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.file.path}" +
+      log.info(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.path}" +
         s"isRemote? ${fileDeletedMsg.isRemote}")
       commActor ! fileDeletedMsg
-      context become handleMessages(pathToLines - fileDeletedMsg.file.path)
+      context become handleMessages(pathToLines - fileDeletedMsg.path)
 
     case GetLinesMsg(path, patch) =>
       log.info(s"actors.FileHandlerActor got a GetLinesMsg for path $path")
@@ -82,6 +82,6 @@ object FileHandlerActor {
   type LinesOption = Option[Traversable[String]]
 
   sealed trait MapQueryMsg
-  case class MapContainsKey(path: Path) extends MapQueryMsg
+  case class MapContainsKey(path: String) extends MapQueryMsg
   case class MapContainsValue(lines: LinesOption) extends MapQueryMsg
 }

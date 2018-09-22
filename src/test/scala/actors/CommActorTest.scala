@@ -128,7 +128,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     "forward the msg when receiving a FileDeletedMsg with isRemote = false" in {
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
-      val msg = FileDeletedMsg(File.currentWorkingDirectory)
+      val msg = FileDeletedMsg(File.currentWorkingDirectory.toString())
       commActor ! msg
 
       expectMsg(msg)
@@ -140,16 +140,16 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
       val file = File.currentWorkingDirectory
-      val msg = FileDeletedMsg(file, isRemote = true)
+      val msg = FileDeletedMsg(file.toString(), isRemote = true)
       commActor ! msg
 
-      expectMsg(DeleteFileMsg(file.path))
+      expectMsg(DeleteFileMsg(file.toString()))
     }
 
     "forward the msg when receiving a FileCreatedMsg with isRemote = false" in {
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
-      val msg = FileCreatedMsg(File.currentWorkingDirectory)
+      val msg = FileCreatedMsg("")
       commActor ! msg
 
       expectMsg(msg)
@@ -158,11 +158,10 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     "Send a CreateFileMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
-      val file = File.currentWorkingDirectory
-      val msg = FileCreatedMsg(file, isRemote = true)
+      val msg = FileCreatedMsg("", isRemote = true)
       commActor ! msg
 
-      expectMsg(CreateFileMsg(file.path))
+      expectMsg(CreateFileMsg(""))
     }
 
     "forward the msg when receiving a DiffEventMsg with isRemote = false" in {
@@ -170,7 +169,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
       val patch: Patch[String] = DiffUtils.diff(List[String]().asJava, List[String]().asJava)
 
-      val msg = DiffEventMsg(File.currentWorkingDirectory.path, patch, isRemote = false)
+      val msg = DiffEventMsg("", patch, isRemote = false)
       commActor ! msg
 
       expectMsg(msg)
@@ -179,11 +178,10 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     "send an ApplyPatchMsg msg when receiving a DiffEventMsg with isRemote = true" in {
       val patch: Patch[String] = DiffUtils.diff(List[String]().asJava, List[String]().asJava)
 
-      val path = File.currentWorkingDirectory.path
-      val msg = DiffEventMsg(path, patch, isRemote = true)
+      val msg = DiffEventMsg("", patch, isRemote = true)
       commActor ! msg
 
-      expectMsg(ApplyPatchMsg(path, patch))
+      expectMsg(ApplyPatchMsg("", patch))
     }
   }
 
