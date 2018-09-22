@@ -61,7 +61,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       //needs to be done this way because Patch.equals is not good
       expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
         case ModificationDataMsg(receivedPath, receivedNewLines, receivedOldLines) =>
-          receivedPath == path && receivedNewLines == newLines.asJava && receivedOldLines.isEmpty
+          receivedPath == path && receivedNewLines == newLines && receivedOldLines.isEmpty
         case _ => false
       }
     }
@@ -77,7 +77,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       //needs to be done this way because Patch.equals is not good
       expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
         case ModificationDataMsg(receivedPath, receivedNewLines, receivedOldLines) =>
-          receivedPath == path && receivedNewLines == newLines.asJava &&
+          receivedPath == path && receivedNewLines == newLines &&
             receivedOldLines.getOrElse(None) == oldLines
         case _ => false
       }
