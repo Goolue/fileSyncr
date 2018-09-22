@@ -8,13 +8,13 @@ import akka.routing.{BroadcastRoutingLogic, Routee, Router}
 
 class CommActor(private val url: String, private val diffActor: ActorRef,
                 private val fileHandlerActor: ActorRef) extends BasicActor {
-  def receive: Receive = handleMassages(Map.empty)
+  def receive: Receive = handleMassages(Map.empty, Router(BroadcastRoutingLogic(), Vector.empty[Routee]))
 
   private val protocol = "akka.tcp"
 
-  private var router: Router = Router(BroadcastRoutingLogic(), Vector.empty[Routee])
+//  private var router: Router = Router(BroadcastRoutingLogic(), Vector.empty[Routee])
 
-  def handleMassages(connections: Map[String, ActorSelection]): Receive = {
+  def handleMassages(connections: Map[String, ActorSelection], router: Router): Receive = {
     case HasConnectionQuery(msgUrl) =>
       log.info(s"$getClassName got an HasConnectionQuery for msgUrl $msgUrl")
       sender() ! connections.contains(msgUrl)
@@ -29,8 +29,8 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
           case _ =>
             if (!connections.contains(msgUrl) && isValidUrl(msgUrl)) {
               val selection = context.actorSelection(createRemotePath(msgUrl, port, actorPathStr))
-              router = router.addRoutee(selection)
-              context become handleMassages(connections.updated(msgUrl, selection))
+//              router = router.addRoutee(selection)
+              context become handleMassages(connections.updated(msgUrl, selection), router.addRoutee(selection))
             }
             else log.info(s"$getClassName got an invalid msgUrl $msgUrl")
         }
@@ -39,8 +39,8 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
     case RemoveRemoteConnectionMsg(urlToRemove, msg) =>
       log.info(s"$getClassName got an RemoveRemoteConnectionMsg for url $urlToRemove with msg $msg")
       if (urlToRemove != null && connections.contains(urlToRemove)) {
-        router = router.removeRoutee(connections.getOrElse[ActorSelection](urlToRemove, context.actorSelection(""))) //TODO maybe else part is not good
-        context become handleMassages(connections - urlToRemove)
+        val newRouter = router.removeRoutee(connections.getOrElse[ActorSelection](urlToRemove, context.actorSelection(""))) //TODO maybe else part is not good
+        context become handleMassages(connections - urlToRemove, newRouter)
       }
 
     case DisconnectMsg(msg) =>
@@ -75,13 +75,11 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
       val path = diffEventMsg.path
       val isRemote = diffEventMsg.isRemote
       log.info(s"$getClassName got an DiffEventMsg for path $path, isRemote? $isRemote")
-      if (!isRemote) {
+      if (isRemote) {
+        diffActor ! ApplyPatchMsg(path, diffEventMsg.patch)
+      } else {
         log.info(s"$getClassName routing DiffEventMsg for path $path to ${router.routees.size} routees")
         router.route(diffEventMsg, context.self)
-      }
-      else {
-        //TODO ApplyPatchMsg send to DiffActor
-        diffActor ! ApplyPatchMsg(path, diffEventMsg.patch)
       }
 
 

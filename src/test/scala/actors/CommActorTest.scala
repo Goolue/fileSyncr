@@ -165,7 +165,6 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       expectMsg(CreateFileMsg(file.path))
     }
 
-
     "forward the msg when receiving a DiffEventMsg with isRemote = false" in {
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
@@ -177,8 +176,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       expectMsg(msg)
     }
 
-
-    "forward the msg when receiving a DiffEventMsg with isRemote = true" in {
+    "send an ApplyPatchMsg msg when receiving a DiffEventMsg with isRemote = true" in {
       val patch: Patch[String] = DiffUtils.diff(List[String]().asJava, List[String]().asJava)
 
       val path = File.currentWorkingDirectory.path
