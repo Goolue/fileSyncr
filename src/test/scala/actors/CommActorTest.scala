@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import actors.CommActor.{AddRemoteConnectionMsg, DisconnectMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, CreateFileMsg, DeleteFileMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
 import com.github.difflib.DiffUtils
@@ -23,10 +23,12 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   val localhostUrl = "127.0.0.1"
 
   before {
-    commActor = system.actorOf(Props(new CommActor(localhostUrl, testActor, testActor)), "commActor")
+    val rand = scala.util.Random.nextInt()
+    commActor = system.actorOf(Props(new CommActor(localhostUrl, testActor, testActor)), s"commActor$rand")
   }
 
   after {
+    commActor ! PoisonPill
     commActor = null
   }
 
@@ -128,7 +130,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
       expectMsg(msg)
 
-      commActor ! DisconnectMsg(Some("manual shutdown"))
+//      commActor ! DisconnectMsg(Some("manual shutdown"))
     }
 
     "Send a DeleteFileMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
@@ -139,8 +141,6 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       commActor ! msg
 
       expectMsg(DeleteFileMsg(file.path))
-
-      commActor ! DisconnectMsg(Some("manual shutdown"))
     }
 
     "forward the msg when receiving a FileCreatedMsg with isRemote = false" in {
@@ -150,8 +150,6 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       commActor ! msg
 
       expectMsg(msg)
-
-      commActor ! DisconnectMsg(Some("manual shutdown"))
     }
 
     "Send a CreateFileMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
@@ -162,8 +160,6 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       commActor ! msg
 
       expectMsg(CreateFileMsg(file.path))
-
-      commActor ! DisconnectMsg(Some("manual shutdown"))
     }
 
 
@@ -176,8 +172,6 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       commActor ! msg
 
       expectMsg(msg)
-
-      commActor ! DisconnectMsg(Some("manual shutdown"))
     }
 
 
