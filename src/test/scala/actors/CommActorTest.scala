@@ -2,7 +2,7 @@ package actors
 
 import java.util.concurrent.TimeUnit
 
-import actors.CommActor.{AddRemoteConnectionMsg, DisconnectMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
+import actors.CommActor.{AddRemoteConnectionMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, CreateFileMsg, DeleteFileMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
@@ -10,19 +10,22 @@ import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
 import com.github.difflib.DiffUtils
 import com.github.difflib.patch.Patch
+import extensions.AddressExtension
 import org.scalatest._
 
-import scala.concurrent.duration.Duration
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.Duration
 
 class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
 
   var commActor: ActorRef = _
-  val DEFAULT_PORT = 2552
+  var currPort: Int = _
   val localhostUrl = "127.0.0.1"
 
   before {
+    currPort = AddressExtension(system).address.port.getOrElse(-1)
+    println(s"system using port $currPort")
     val rand = scala.util.Random.nextInt()
     commActor = system.actorOf(Props(new CommActor(localhostUrl, testActor, testActor)), s"commActor$rand")
   }
@@ -123,7 +126,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     }
 
     "forward the msg when receiving a FileDeletedMsg with isRemote = false" in {
-      commActor ! AddRemoteConnectionMsg(localhostUrl, DEFAULT_PORT, testActor.path.toStringWithoutAddress)
+      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
       val msg = FileDeletedMsg(File.currentWorkingDirectory)
       commActor ! msg
@@ -134,7 +137,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     }
 
     "Send a DeleteFileMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
-      commActor ! AddRemoteConnectionMsg(localhostUrl, DEFAULT_PORT, testActor.path.toStringWithoutAddress)
+      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
       val file = File.currentWorkingDirectory
       val msg = FileDeletedMsg(file, isRemote = true)
@@ -144,7 +147,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     }
 
     "forward the msg when receiving a FileCreatedMsg with isRemote = false" in {
-      commActor ! AddRemoteConnectionMsg(localhostUrl, DEFAULT_PORT, testActor.path.toStringWithoutAddress)
+      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
       val msg = FileCreatedMsg(File.currentWorkingDirectory)
       commActor ! msg
@@ -153,7 +156,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     }
 
     "Send a CreateFileMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
-      commActor ! AddRemoteConnectionMsg(localhostUrl, DEFAULT_PORT, testActor.path.toStringWithoutAddress)
+      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
       val file = File.currentWorkingDirectory
       val msg = FileCreatedMsg(file, isRemote = true)
@@ -164,7 +167,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
 
     "forward the msg when receiving a DiffEventMsg with isRemote = false" in {
-      commActor ! AddRemoteConnectionMsg(localhostUrl, DEFAULT_PORT, testActor.path.toStringWithoutAddress)
+      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
       val patch: Patch[String] = DiffUtils.diff(List[String]().asJava, List[String]().asJava)
 
