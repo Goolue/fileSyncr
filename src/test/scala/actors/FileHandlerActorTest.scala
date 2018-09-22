@@ -40,11 +40,19 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
   }
 
   "A FileHandlerActor" must {
-    "send a FileCreatedMsg unchanged when receiving a FileCreatedMsg" in {
+    "send a FileCreatedMsg unchanged to commActor when receiving a FileCreatedMsg with isRemote = false" in {
       val fileToSend = File.home
       val msg = FileCreatedMsg(FileUtils.getFileAsRelativeStr(fileToSend))
       fileHandler ! msg
       expectMsg(msg)
+    }
+
+    "create the appropriate file when receiving a FileCreatedMsg with isRemote = true" in {
+      val fileToSend = File.newTemporaryFile("someFile", ".txt", Some(File.currentWorkingDirectory))
+      val msg = FileCreatedMsg(FileUtils.getFileAsRelativeStr(fileToSend), isRemote = true)
+      fileHandler ! msg
+
+      (File.currentWorkingDirectory / "someFile.txt").exists should be (true)
     }
 
     "NOT add the path of the file to it's map when receiving a FileCreatedMsg" in {
@@ -98,7 +106,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       expectMsg(false)
     }
 
-    "send the same FileDeletedMsg to the commActor when receiving a FileDeletedMsg" in {
+    "send the same FileDeletedMsg to the commActor when receiving a FileDeletedMsg with isRemote = false" in {
       //send a file mod msg so the path will be in the map
       val modMsg = FileModifiedMsg(FileUtils.getFileAsRelativeStr(file))
       fileHandler ! modMsg
@@ -109,6 +117,22 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       fileHandler ! msg
 
       expectMsg(msg)
+    }
+
+    "delete the appropriate file when receiving a FileDeletedMsg with isRemote = true" in {
+      //send a file mod msg so the path will be in the map
+      val modMsg = FileModifiedMsg(FileUtils.getFileAsRelativeStr(file))
+      fileHandler ! modMsg
+      //clear the message from the queue
+      expectMsgType[ModificationDataMsg]
+
+      val fileToSend = File.newTemporaryFile("someFile", ".txt", Some(File.currentWorkingDirectory))
+
+      val msg = FileDeletedMsg(FileUtils.getFileAsRelativeStr(fileToSend), isRemote = true)
+      fileHandler ! msg
+
+      // not using fileToSend because fileToSend.exists == true
+      (File.currentWorkingDirectory / fileToSend.name).exists should be (false)
     }
 
     "send an OldLinesMsg(lines, path, patch) when receiving a GetLinesMsg(path, patch)" in {

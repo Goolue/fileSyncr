@@ -25,17 +25,16 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
   private val secondDir = File.newTemporaryDirectory(parent = Some(File.currentWorkingDirectory))
 
   // system1 actors
-  private val commActor1 = system1.actorOf(Props(new CommActor(localhostUrl, fileHandler1, diffActor1)), "commActor1")
-
-  private lazy val fileHandler1: ActorRef = system1.actorOf(Props(new FileHandlerActor(diffActor1, commActor1)))
+  private val commActor1 = system1.actorOf(Props(new CommActor(localhostUrl, diffActor1, fileHandler1)), "commActor1")
+  private lazy val fileHandler1: ActorRef = system1.actorOf(Props(new FileHandlerActor(diffActor1, commActor1, firstDir)))
   private lazy val diffActor1: ActorRef = system1.actorOf(Props(new DiffActor(commActor1, fileHandler1)))
   private var configurer1: FileWatcherConfigurer = new FileWatcherConfigurer(system1, fileHandler1, firstDir)
-  // system2 actors
-  private val commActor2 =  system2.actorOf(Props(new CommActor(localhostUrl, fileHandler2, diffActor2)), "commActor2")
 
-  private lazy val fileHandler2: ActorRef = system.actorOf(Props(new FileHandlerActor(diffActor2, commActor2)))
-  private lazy val diffActor2: ActorRef = system.actorOf(Props(new DiffActor(commActor1, fileHandler2)))
-  private var configurer2: FileWatcherConfigurer = new FileWatcherConfigurer(system, fileHandler2, secondDir)
+  // system2 actors
+  private val commActor2 =  system2.actorOf(Props(new CommActor(localhostUrl, diffActor2, fileHandler2)), "commActor2")
+  private lazy val fileHandler2: ActorRef = system2.actorOf(Props(new FileHandlerActor(diffActor2, commActor2, secondDir)), "fileHandler2")
+  private lazy val diffActor2: ActorRef = system2.actorOf(Props(new DiffActor(commActor1, fileHandler2)), "diffActor2")
+  private var configurer2: FileWatcherConfigurer = new FileWatcherConfigurer(system2, fileHandler2, secondDir)
   override def beforeAll {
     println(s"system1 running on port ${AddressExtension.portOf(system)}")
     println(s"system2 running on port ${AddressExtension.portOf(system2)}")
@@ -63,7 +62,8 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
       val fileName = "someFile.txt"
       val file = firstDir.createChild(fileName)
 
-      Thread.sleep(20000)
+      while(true) {}
+//      Thread.sleep(20000)
 
 //      (secondDir / fileName).exists should be (true)
 //      file.deleteOnExit()

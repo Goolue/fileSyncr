@@ -10,7 +10,9 @@ import akka.actor.ActorRef
 import better.files.File
 import better.files.File.RandomAccessMode
 
-class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends BasicActor {
+class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File = File.currentWorkingDirectory) extends BasicActor {
+
+  if (!dir.isDirectory) log.error(s"dir $dir is NOT a directory!")
 
   def receive: Receive = handleMessages(Map.empty)
 
@@ -24,9 +26,21 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends B
 
     //other msgs
     case fileCreateMsg: FileCreatedMsg =>
+      val isRemote = fileCreateMsg.isRemote
       log.info(s"actors.FileHandlerActor got a FileCreatedMsd for path ${fileCreateMsg.path}, " +
-        s"isRemote? ${fileCreateMsg.isRemote}")
-      commActor ! fileCreateMsg
+        s"isRemote? $isRemote")
+      if (!isRemote) {
+        commActor ! fileCreateMsg
+      }
+      else {
+        val fileToCreate = File(dir.path.toString + s"/${fileCreateMsg.path}")
+        if (fileToCreate.exists) {
+          log.warning(s"got a FileCreatedMsg for path ${fileCreateMsg.path} but path already exists!")
+        }
+        else {
+          fileToCreate.createIfNotExists(createParents = true)
+        }
+      }
 
     case FileModifiedMsg(path, isRemote) =>
       log.info(s"actors.FileHandlerActor got a FileModifiedMsg for path $path, isRemote? $isRemote")
@@ -43,9 +57,21 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef) extends B
       }
 
     case fileDeletedMsg: FileDeletedMsg =>
+      val isRemote = fileDeletedMsg.isRemote
       log.info(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.path}" +
-        s"isRemote? ${fileDeletedMsg.isRemote}")
-      commActor ! fileDeletedMsg
+        s" isRemote? $isRemote")
+      if (!isRemote) {
+        commActor ! fileDeletedMsg
+      }
+      else {
+        val fileToDelete =  dir / fileDeletedMsg.path
+        if (!fileToDelete.exists) {
+          log.warning(s"got a FileCreatedMsg for path ${fileToDelete.path} but path does not exist!")
+        }
+        else {
+          fileToDelete.delete()
+        }
+      }
       context become handleMessages(pathToLines - fileDeletedMsg.path)
 
     case GetLinesMsg(path, patch) =>

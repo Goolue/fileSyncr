@@ -63,9 +63,9 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
 
     case FileCreatedMsg(path, isRemote) =>
       if (isRemote) {
-        log.info(s"$getClassName got an FileCreatedMsg for path $path with isRemote = true, s" +
-          s"ending FileCreatedMsg to fileHandler")
-        fileHandlerActor ! CreateFileMsg(path)
+        log.info(s"$getClassName got an FileCreatedMsg for path $path with isRemote = true, " +
+          s"sending FileCreatedMsg to fileHandler $fileHandlerActor")
+        fileHandlerActor ! FileCreatedMsg(path, isRemote = true)
       } else {
         log.info(s"$getClassName got an FileCreatedMsg for path $path, routing to ${router.routees.size} routees")
         router.route(FileCreatedMsg(path, isRemote = true), context.self)
