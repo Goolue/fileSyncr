@@ -9,7 +9,6 @@ object Main extends App {
     val commActor = system.actorOf(Props[CommActor])
     lazy val fileHandler: ActorRef = system.actorOf(Props(new FileHandlerActor(diffActor, commActor)))
     lazy val diffActor = system.actorOf(Props(new DiffActor(commActor, fileHandler)))
-    var configurer: FileWatcherConfigurer = new FileWatcherConfigurer(system, fileHandler, fileToWatch)
 
     while (true) {}
   }

@@ -13,6 +13,7 @@ import better.files.File.RandomAccessMode
 class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File = File.currentWorkingDirectory) extends BasicActor {
 
   if (!dir.isDirectory) log.error(s"dir $dir is NOT a directory!")
+  FileWatcherConfigurer.watch(context.system, context.self, dir)
 
   def receive: Receive = handleMessages(Map.empty)
 
