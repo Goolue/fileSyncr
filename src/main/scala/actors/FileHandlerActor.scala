@@ -15,6 +15,8 @@ import scala.collection.mutable
 
 class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File = File.currentWorkingDirectory) extends BasicActor {
 
+  log.info(s"handling dir $dir")
+
   if (!dir.isDirectory) log.error(s"dir $dir is NOT a directory!")
 
   // create a watcher to notify this FileHandlerActor when files are created, deleted or modified
@@ -73,7 +75,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
       log.info(s"actors.FileHandlerActor got a FileModifiedMsg for path $path, isRemote? $isRemote")
       if (!isRemote) {
         val oldLines = pathToLines.getOrElse[LinesOption](path, None)
-        val newLines = File(path).lines
+        val newLines = (dir / path).lines
         if (oldLines != newLines) {
           diffActor ! ModificationDataMsg(path, newLines, oldLines)
           context become handleMessages(pathToLines.updated(path, Some(newLines)))

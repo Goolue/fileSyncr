@@ -67,7 +67,7 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
       file.deleteOnExit()
       (secondDir / fileName).deleteOnExit()
 
-      Thread.sleep(2000)
+      Thread sleep 2000
 
       (secondDir / fileName).exists should be (true)
     }
