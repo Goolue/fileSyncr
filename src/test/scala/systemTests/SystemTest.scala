@@ -21,8 +21,10 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
 
   // directory for the 1st system
   private val firstDir = File.newTemporaryDirectory(parent = Some(File.currentWorkingDirectory))
+  firstDir.createIfNotExists(asDirectory = true)
   // directory for the 2nd system
   private val secondDir = File.newTemporaryDirectory(parent = Some(File.currentWorkingDirectory))
+  secondDir.createIfNotExists(asDirectory = true)
 
   // system1 actors
   private val commActor1 = system1.actorOf(Props(new CommActor(localhostUrl, diffActor1, fileHandler1)), "commActor1")
@@ -40,12 +42,12 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
     println(s"system2 running on port ${AddressExtension.portOf(system2)}")
     println(s"firstDir is: ${firstDir.path}")
     println(s"secondDir is: ${secondDir.path}")
+
+    firstDir.deleteOnExit()
+    secondDir.deleteOnExit()
   }
 
   override def afterAll {
-    firstDir.deleteOnExit()
-    secondDir.deleteOnExit()
-
     TestKit.shutdownActorSystem(system)
     TestKit.shutdownActorSystem(system2)
   }
@@ -62,12 +64,12 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
       val fileName = "someFile.txt"
       val file = firstDir.createChild(fileName)
 
-//      while(true) {}
-      Thread.sleep(20000)
-//
-      (secondDir / fileName).exists should be (true)
       file.deleteOnExit()
       (secondDir / fileName).deleteOnExit()
+
+      Thread.sleep(2000)
+
+      (secondDir / fileName).exists should be (true)
     }
   }
 }

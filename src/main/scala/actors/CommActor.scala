@@ -1,7 +1,7 @@
 package actors
 
 import actors.CommActor._
-import actors.Messages.EventDataMessage.{ApplyPatchMsg, CreateFileMsg, DeleteFileMsg, DiffEventMsg}
+import actors.Messages.EventDataMessage.{ApplyPatchMsg, DeleteFileMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
 import akka.actor.{ActorRef, ActorSelection}
 import akka.routing.{BroadcastRoutingLogic, Routee, Router}

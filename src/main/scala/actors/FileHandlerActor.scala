@@ -9,11 +9,18 @@ import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.ActorRef
 import better.files.File
 import better.files.File.RandomAccessMode
+import javax.swing.event.DocumentEvent.EventType
+
+import scala.collection.mutable
 
 class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File = File.currentWorkingDirectory) extends BasicActor {
 
   if (!dir.isDirectory) log.error(s"dir $dir is NOT a directory!")
+
+  // create a watcher to notify this FileHandlerActor when files are created, deleted or modified
   FileWatcherConfigurer.watch(context.system, context.self, dir)
+
+  private var filesMonitorMap = mutable.Map.empty[String, EventType]
 
   def receive: Receive = handleMessages(Map.empty)
 
@@ -28,18 +35,37 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
     //other msgs
     case fileCreateMsg: FileCreatedMsg =>
       val isRemote = fileCreateMsg.isRemote
-      log.info(s"actors.FileHandlerActor got a FileCreatedMsd for path ${fileCreateMsg.path}, " +
+      val path = fileCreateMsg.path
+      log.info(s"actors.FileHandlerActor got a FileCreatedMsd for path $path, " +
         s"isRemote? $isRemote")
-      if (!isRemote) {
-        commActor ! fileCreateMsg
-      }
-      else {
-        val fileToCreate = File(dir.path.toString + s"/${fileCreateMsg.path}")
+      if (isRemote) {
+        if (filesMonitorMap.contains(path)) {
+          log.warning(s"map already contains value ${filesMonitorMap.get(path)} for path " +
+            s"$path but received a remote FileCreatedMsg for it!")
+        }
+        log.info(s"fileToWatchMonitor key, vals: ${filesMonitorMap.toList}")
+        filesMonitorMap.update(path, EventType.INSERT)
+        val fileToCreate = File(dir.path.toString + s"/$path")
         if (fileToCreate.exists) {
-          log.warning(s"got a FileCreatedMsg for path ${fileCreateMsg.path} but path already exists!")
+          log.warning(s"got a FileCreatedMsg for path $path but path already exists!")
         }
         else {
           fileToCreate.createIfNotExists(createParents = true)
+        }
+
+      } else {
+        if (filesMonitorMap.contains(path)) {
+          if (filesMonitorMap(path) == EventType.INSERT) {
+            filesMonitorMap -= path
+          }
+          else {
+            log.warning(s"got a non-remote FileCreatedMsg for path $path but map had " +
+              s"value ${filesMonitorMap(path)}")
+            commActor ! fileCreateMsg
+          }
+        }
+        else {
+          commActor ! fileCreateMsg
         }
       }
 
