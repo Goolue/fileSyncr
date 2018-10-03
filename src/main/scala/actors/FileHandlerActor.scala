@@ -14,18 +14,21 @@ import javax.swing.event.DocumentEvent.EventType
 import scala.collection.mutable
 
 /**
-  * //TODO
-  * @param diffActor
-  * @param commActor
-  * @param dir
-  * @param createWatchConfigurer
+  * The Actor responsible for actual file manipulation (creation, deletion and modification).
+  * @param diffActor an ActorRef of a DiffActor
+  * @param commActor an ActorRef of a CommActor
+  * @param dir the directory to handle files in, defaults to the current working directory of the app
+  * @param createWatchConfigurer <b>a flag used for testing</b>. If false, no watcher will be created to alert this
+  *                              Actor to file changes.
   */
 class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File = File.currentWorkingDirectory,
                        createWatchConfigurer: Boolean = true) extends BasicActor {
 
   log.info(s"handling dir $dir")
 
-  if (!dir.isDirectory) log.error(s"dir $dir is NOT a directory!")
+  if (!dir.isDirectory) {
+    throw new Exception(s"dir $dir is NOT a directory!")
+  }
 
   // create a watcher to notify this FileHandlerActor when files are created, deleted or modified
   // for unit tests, we don't create the watcher, in that case createWatchConfigurer is false
