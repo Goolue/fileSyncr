@@ -36,19 +36,15 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
     FileWatcherConfigurer.watch(context.system, context.self, dir)
   }
 
-  // TODO to val
-  private var filesMonitorMap = mutable.Map.empty[String, EventType]
+  def receive: Receive = handleMessages(Map.empty, Set.empty)
 
-  def receive: Receive = handleMessages(Map.empty)
-
-  private def handleFileCreateMsg(fileCreateMsg: FileCreatedMsg) = {
+  private def handleFileCreateMsg(fileCreateMsg: FileCreatedMsg, filesMonitorMap: Set[String]) : Set[String]
+  = {
     def handleRemote(path: String) = {
       if (filesMonitorMap.contains(path)) {
-        log.warning(s"map already contains value ${filesMonitorMap.get(path)} for path " +
+        log.warning(s"map already contains path " +
           s"$path but received a remote FileCreatedMsg for it!")
       }
-      log.info(s"fileToWatchMonitor key, vals: ${filesMonitorMap.toList}")
-      filesMonitorMap.update(path, EventType.INSERT)
       val fileToCreate = File(dir.path.toString + s"/$path")
       if (fileToCreate.exists) {
         log.warning(s"got a FileCreatedMsg for path $path but path already exists!")
@@ -58,20 +54,16 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
       }
     }
 
-    def handleNonRemote(path: String) = {
+    def handleNonRemote(path: String) : Set[String] = {
       if (filesMonitorMap.contains(path)) {
-        if (filesMonitorMap(path) == EventType.INSERT) {
-          filesMonitorMap -= path
-        }
-        else {
-          log.warning(s"got a non-remote FileCreatedMsg for path $path but map had " +
-            s"value ${filesMonitorMap(path)}")
-          commActor ! fileCreateMsg
-        }
+        // This msg was triggered by a file creation initiated by the app.
+        // remove the path from the map and ignore the msg
+        return filesMonitorMap - path
       }
       else {
         commActor ! fileCreateMsg
       }
+      return filesMonitorMap + path
     }
 
     val isRemote = fileCreateMsg.isRemote
@@ -81,9 +73,9 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
 
     if (isRemote) {
       handleRemote(path)
-
+      return filesMonitorMap
     } else {
-      handleNonRemote(path)
+      return handleNonRemote(path)
     }
   }
 
@@ -105,7 +97,8 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
     }
   }
 
-  private def handleFileModMsg(pathToLines: Map[String, LinesOption], path: String, isRemote: Boolean): Unit = {
+  private def handleFileModMsg(pathToLines: Map[String, LinesOption], path: String, isRemote: Boolean,
+                               filesMonitorMap: Set[String]): Unit = {
     log.info(s"actors.FileHandlerActor got a FileModifiedMsg for path $path, isRemote? $isRemote")
     if (isRemote) {
       log.warning(s"got a FileModifiedMsg with isRemote = true for path $path")
@@ -114,7 +107,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
       val newLines = (dir / path).lines
       if (oldLines.isEmpty || oldLines.get != newLines) {
         diffActor ! ModificationDataMsg(path, newLines, oldLines)
-        context become handleMessages(pathToLines.updated(path, Some(newLines)))
+        context become handleMessages(pathToLines.updated(path, Some(newLines)), filesMonitorMap)
       }
       else {
         log.warning(s"$getClassName got a FileModifiedMsg with no change or path $path")
@@ -122,7 +115,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
     }
   }
 
-  def handleMessages(pathToLines: Map[String, LinesOption]): Receive = {
+  def handleMessages(pathToLines: Map[String, LinesOption], filesMonitorMap: Set[String]): Receive = {
 
     //MapQueryMsg, mostly used for testing
     case MapContainsKeyMsg(path) =>
@@ -133,14 +126,15 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
 
     //other msgs
     case fileCreateMsg: FileCreatedMsg =>
-      handleFileCreateMsg(fileCreateMsg)
+      handleFileCreateMsg(fileCreateMsg, filesMonitorMap)
+      context become handleMessages(pathToLines, filesMonitorMap + fileCreateMsg.path)
 
     case FileModifiedMsg(path, isRemote) =>
-      handleFileModMsg(pathToLines, path, isRemote)
+      handleFileModMsg(pathToLines, path, isRemote, filesMonitorMap)
 
     case fileDeletedMsg: FileDeletedMsg =>
       handleFileDeleteMsg(fileDeletedMsg)
-      context become handleMessages(pathToLines - fileDeletedMsg.path)
+      context become handleMessages(pathToLines - fileDeletedMsg.path, filesMonitorMap)
 
     case GetLinesMsg(path, patch) =>
       log.info(s"actors.FileHandlerActor got a GetLinesMsg for path $path")
@@ -166,7 +160,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
           lock.release()
         })
         //update the map
-        context become handleMessages(pathToLines.updated(path, Some(lines)))
+        context become handleMessages(pathToLines.updated(path, Some(lines)), filesMonitorMap)
       }
   }
 
