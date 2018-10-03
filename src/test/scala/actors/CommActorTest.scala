@@ -3,7 +3,7 @@ package actors
 import java.util.concurrent.TimeUnit
 
 import actors.CommActor.{AddRemoteConnectionMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
-import actors.Messages.EventDataMessage.{ApplyPatchMsg, CreateFileMsg, DeleteFileMsg, DiffEventMsg}
+import actors.Messages.EventDataMessage.{ApplyPatchMsg, DeleteFileMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestKit}
@@ -149,19 +149,19 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     "forward the msg when receiving a FileCreatedMsg with isRemote = false" in {
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
-      val msg = FileCreatedMsg("")
-      commActor ! msg
+      val path = ""
+      commActor ! FileCreatedMsg(path)
 
-      expectMsg(msg)
+      expectMsg(FileCreatedMsg(path, isRemote = true))
     }
 
-    "Send a CreateFileMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
+    "Send a FileCreatedMsg msg when receiving a FileCreatedMsg with isRemote = true" in {
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
       val msg = FileCreatedMsg("", isRemote = true)
       commActor ! msg
 
-      expectMsg(CreateFileMsg(""))
+      expectMsg(msg)
     }
 
     "forward the msg when receiving a DiffEventMsg with isRemote = false" in {

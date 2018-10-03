@@ -24,7 +24,6 @@ object Messages {
     case class DiffEventMsg(path: String, patch: StringPatch, isRemote: Boolean = false) extends EventDataMessage
     case class ApplyPatchMsg(path: String, patch: StringPatch) extends EventDataMessage
     case class DeleteFileMsg(path: String) extends EventDataMessage
-    case class CreateFileMsg(path: String) extends EventDataMessage
     case class UpdateFileMsg(path: String, lines: Traversable[String]) extends EventDataMessage
   }
 

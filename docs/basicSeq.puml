@@ -36,7 +36,7 @@
 		endnote
 		actors.FileHandlerActor -> CommActor_local : FileCreatedMsg(file)
 		CommActor_local -> CommActor_remote : FileCreatedMsg(file)
-		CommActor_remote -> FileHandlerActor_remote : CreateFileMsg(path)
+		CommActor_remote -> FileHandlerActor_remote : FileCreatedMsg(path)
 		FileHandlerActor_remote -> fileSystem_remote : creates file
 
 	else deleted
