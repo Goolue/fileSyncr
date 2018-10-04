@@ -3,7 +3,7 @@ package actors
 import java.util.concurrent.TimeUnit
 
 import actors.CommActor.{AddRemoteConnectionMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
-import actors.Messages.EventDataMessage.{ApplyPatchMsg, DeleteFileMsg, DiffEventMsg}
+import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestKit}
@@ -136,14 +136,14 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 //      commActor ! DisconnectMsg(Some("manual shutdown"))
     }
 
-    "Send a DeleteFileMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
+    "Send a FileDeletedMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
       val file = File.currentWorkingDirectory
       val msg = FileDeletedMsg(file.toString(), isRemote = true)
       commActor ! msg
 
-      expectMsg(DeleteFileMsg(file.toString()))
+      expectMsg(FileDeletedMsg(file.toString()))
     }
 
     "forward the msg when receiving a FileCreatedMsg with isRemote = false" in {

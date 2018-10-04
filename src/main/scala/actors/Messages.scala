@@ -23,7 +23,6 @@ object Messages {
                                    implicit val oldLines: Option[Traversable[String]] = None) extends EventDataMessage
     case class DiffEventMsg(path: String, patch: StringPatch, isRemote: Boolean = false) extends EventDataMessage
     case class ApplyPatchMsg(path: String, patch: StringPatch) extends EventDataMessage
-    case class DeleteFileMsg(path: String) extends EventDataMessage
     case class UpdateFileMsg(path: String, lines: Traversable[String]) extends EventDataMessage
   }
 

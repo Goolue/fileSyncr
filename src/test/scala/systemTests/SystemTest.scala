@@ -19,11 +19,13 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
   private val system2 = ActorSystem("system2")
   private val sys2Port = getPortOfSystem(system2)
 
+  private val tempFilesDir = File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles"
+
   // directory for the 1st system
-  private val firstDir = File.newTemporaryDirectory(parent = Some(File.currentWorkingDirectory))
+  private val firstDir = File.newTemporaryDirectory(parent = Some(tempFilesDir))
   firstDir.createIfNotExists(asDirectory = true)
   // directory for the 2nd system
-  private val secondDir = File.newTemporaryDirectory(parent = Some(File.currentWorkingDirectory))
+  private val secondDir = File.newTemporaryDirectory(parent = Some(tempFilesDir))
   secondDir.createIfNotExists(asDirectory = true)
 
   // system1 actors
@@ -45,6 +47,9 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
 
     firstDir.deleteOnExit()
     secondDir.deleteOnExit()
+
+    commActor1 ! AddRemoteConnectionMsg(localhostUrl, sys2Port, commActor2.path.toStringWithoutAddress,
+      Some(system2.name))
   }
 
   override def afterAll {
@@ -58,18 +63,27 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
 
   "The other file" must {
     "be created when the first file is created" in {
-      commActor1 ! AddRemoteConnectionMsg(localhostUrl, sys2Port, commActor2.path.toStringWithoutAddress,
-        Some(system2.name))
-
       val fileName = "someFile.txt"
       val file = firstDir.createChild(fileName)
 
       file.deleteOnExit()
-      (secondDir / fileName).deleteOnExit()
 
       Thread sleep 2000
 
       (secondDir / fileName).exists should be (true)
+    }
+
+    "be deleted when the first file is deleted" in {
+      val fileName = "someFile.txt"
+
+      // create the file to be deleted
+      val file = firstDir.createChild(fileName)
+
+      file.delete()
+
+      Thread sleep 2000
+
+      (secondDir / fileName).exists should be (false)
     }
   }
 }

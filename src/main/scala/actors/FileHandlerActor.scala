@@ -1,7 +1,5 @@
 package actors
 
-import java.nio.file.Path
-
 import actors.FileHandlerActor._
 import actors.Messages.EventDataMessage.{ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.FileEventMessage._
@@ -9,9 +7,6 @@ import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.ActorRef
 import better.files.File
 import better.files.File.RandomAccessMode
-import javax.swing.event.DocumentEvent.EventType
-
-import scala.collection.mutable
 
 /**
   * The Actor responsible for actual file manipulation (creation, deletion and modification).
@@ -162,6 +157,10 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
         //update the map
         context become handleMessages(pathToLines.updated(path, Some(lines)), filesMonitorMap)
       }
+
+    // default case
+    case msg =>
+      log.warning(s"Got an unidentified msg $msg")
   }
 
 }
