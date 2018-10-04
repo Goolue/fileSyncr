@@ -1,15 +1,26 @@
+import actors.Messages.EventDataMessage.DiffEventMsg
 import actors.{CommActor, DiffActor, FileHandlerActor, FileWatcherConfigurer}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import better.files.File
+import com.github.difflib.DiffUtils
+import org.nustaq.serialization.FSTConfiguration
+import org.nustaq.serialization.simpleapi.DefaultCoder
+
+import scala.collection.JavaConverters._
 
 object Main extends App {
   override def main(args: Array[String]): Unit = {
-    val fileToWatch: File = File.currentWorkingDirectory / "src" / "test" / "resources"
-    val system = ActorSystem("mainSys")
-    val commActor = system.actorOf(Props[CommActor])
-    lazy val fileHandler: ActorRef = system.actorOf(Props(new FileHandlerActor(diffActor, commActor)))
-    lazy val diffActor = system.actorOf(Props(new DiffActor(commActor, fileHandler)))
+    val lines1 = List.empty[String]
+    val lines2 = List("bla bla")
 
-    while (true) {}
+    val patch = DiffUtils.diff(lines1.asJava, lines2.asJava)
+    val msg = DiffEventMsg("", patch)
+
+    val coder = new DefaultCoder // reuse this (per thread)
+
+    val serialized = coder.toByteArray(msg)
+
+    println(serialized)
+    val deserialized = coder.toObject(serialized)
   }
 }
