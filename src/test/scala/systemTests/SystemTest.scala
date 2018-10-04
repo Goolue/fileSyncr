@@ -56,6 +56,7 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
   override def afterAll {
     TestKit.shutdownActorSystem(system)
     TestKit.shutdownActorSystem(system2)
+    tempFilesDir.clear()
   }
 
   private def getPortOfSystem(sys: ActorSystem): Int = {
@@ -92,7 +93,7 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
 
       val secondFile = secondDir / fileName
 
-      Thread sleep 2000
+      Thread sleep 1000
 
       secondFile.lines should be (List(line))
 
