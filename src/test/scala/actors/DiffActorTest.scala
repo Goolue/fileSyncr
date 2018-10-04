@@ -11,6 +11,7 @@ import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
 import better.files.File
 import com.github.difflib.DiffUtils
 import com.github.difflib.patch.Patch
+import entities.serialization.SerializationPatchWrapper
 import org.scalatest._
 
 import scala.collection.JavaConverters._
@@ -56,7 +57,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       diffActor ! modMsg
 
       val patch: Patch[String] = DiffUtils.diff(List[String]().asJava, newLines.asJava)
-      val diffMsg = DiffEventMsg(path.toString, patch)
+      val diffMsg = DiffEventMsg(path.toString, new SerializationPatchWrapper(patch))
 
       //needs to be done this way because Patch.equals is not good
       expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {
@@ -72,7 +73,7 @@ class DiffActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       diffActor ! modMsg
 
       val patch: Patch[String] = DiffUtils.diff(oldLines.asJava, newLines.asJava)
-      val diffMsg = DiffEventMsg(path.toString, patch)
+      val diffMsg = DiffEventMsg(path.toString, new SerializationPatchWrapper(patch))
 
       //needs to be done this way because Patch.equals is not good
       expectMsgPF(Duration.apply(NUM_SECS_TO_WAIT, TimeUnit.SECONDS)) {

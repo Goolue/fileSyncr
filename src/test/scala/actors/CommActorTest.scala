@@ -10,6 +10,7 @@ import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
 import com.github.difflib.DiffUtils
 import com.github.difflib.patch.Patch
+import entities.serialization.SerializationPatchWrapper
 import extensions.AddressExtension
 import org.scalatest._
 
@@ -131,9 +132,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       val msg = FileDeletedMsg(File.currentWorkingDirectory.toString())
       commActor ! msg
 
-      expectMsg(msg)
-
-//      commActor ! DisconnectMsg(Some("manual shutdown"))
+      expectMsg(FileDeletedMsg(File.currentWorkingDirectory.toString(), true))
     }
 
     "Send a FileDeletedMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
@@ -143,7 +142,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       val msg = FileDeletedMsg(file.toString(), isRemote = true)
       commActor ! msg
 
-      expectMsg(FileDeletedMsg(file.toString()))
+      expectMsg(msg)
     }
 
     "forward the msg when receiving a FileCreatedMsg with isRemote = false" in {
@@ -168,8 +167,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
       val patch: Patch[String] = DiffUtils.diff(List[String]().asJava, List[String]().asJava)
-
-      val msg = DiffEventMsg("", patch, isRemote = false)
+      val msg = DiffEventMsg("", new SerializationPatchWrapper(patch), isRemote = false)
       commActor ! msg
 
       expectMsg(msg)
@@ -178,10 +176,14 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     "send an ApplyPatchMsg msg when receiving a DiffEventMsg with isRemote = true" in {
       val patch: Patch[String] = DiffUtils.diff(List[String]().asJava, List[String]().asJava)
 
-      val msg = DiffEventMsg("", patch, isRemote = true)
+      val wrapper = new SerializationPatchWrapper(patch)
+      val msg = DiffEventMsg("", wrapper, isRemote = true)
       commActor ! msg
 
-      expectMsg(ApplyPatchMsg("", patch))
+      expectMsgPF(Duration.apply(3, TimeUnit.SECONDS)) {
+        case ApplyPatchMsg(_, msgPatch) => msgPatch != null && msgPatch.equals(patch)
+        case _ => false
+      }
     }
   }
 

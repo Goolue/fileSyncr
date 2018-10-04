@@ -74,7 +74,7 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
       val isRemote = diffEventMsg.isRemote
       log.info(s"$getClassName got an DiffEventMsg for path $path, isRemote? $isRemote")
       if (isRemote) {
-        diffActor ! ApplyPatchMsg(path, diffEventMsg.patch)
+        diffActor ! ApplyPatchMsg(path, diffEventMsg.patch.toPatch)
       } else {
         log.info(s"$getClassName routing DiffEventMsg for path $path to ${router.routees.size} routees")
         router.route(diffEventMsg, context.self)

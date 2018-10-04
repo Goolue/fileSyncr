@@ -3,10 +3,10 @@ package entities.serialization
 import com.github.difflib.patch.Patch
 import scala.collection.JavaConverters._
 
-class SerializablePatch(val deltas: List[SerializableDelta]) extends Serializable {
+class SerializationPatchWrapper(val deltas: List[SerializationDeltaWrapper]) extends Serializable {
 
   def this(patch: Patch[String]) {
-    this(patch.getDeltas.asScala.map(d => new SerializableDelta(d)))
+    this(patch.getDeltas.asScala.map(d => new SerializationDeltaWrapper(d)).toList)
   }
 
   def toPatch: Patch[String] = {
@@ -15,4 +15,5 @@ class SerializablePatch(val deltas: List[SerializableDelta]) extends Serializabl
     patch
   }
 
+  override def toString: String = s"[deltas: $deltas]"
 }

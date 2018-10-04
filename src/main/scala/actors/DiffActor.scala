@@ -5,6 +5,7 @@ import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.ActorRef
 import better.files.File
 import com.github.difflib.DiffUtils
+import entities.serialization.SerializationPatchWrapper
 
 import scala.collection.JavaConverters._
 
@@ -14,7 +15,7 @@ class DiffActor(commActor: => ActorRef, fileHandler : => ActorRef) extends Basic
       context.system.log.info("got a ModificationDataMsg")
       val oldLinesValue = oldLines.getOrElse(List())
       val patch = DiffUtils.diff(oldLinesValue.toList.asJava, newLines.toList.asJava)
-      commActor ! DiffEventMsg(path, patch)
+      commActor ! DiffEventMsg(path, new SerializationPatchWrapper(patch))
 
     case ApplyPatchMsg(path, patch) =>
       context.system.log.info(s"got an ApplyPatchMsg for path $path")

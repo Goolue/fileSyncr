@@ -2,16 +2,12 @@ package entities.serialization
 
 import com.github.difflib.patch._
 
-class SerializableDelta(val deltaType: DeltaType, val original: SerializableChunk,
-                                 val revised: SerializableChunk) extends Serializable {
+class SerializationDeltaWrapper(val deltaType: DeltaType, val original: SerializationChunkWrapper,
+                                val revised: SerializationChunkWrapper) extends Serializable {
 
   def this(delta: Delta[String]) {
-    this(delta match {
-      case ChangeDelta => DeltaType.CHANGE
-      case DeleteDelta => DeltaType.DELETE
-      case InsertDelta => DeltaType.INSERT
-    },
-      new SerializableChunk(delta.getOriginal), new SerializableChunk(delta.getRevised))
+    this(delta.getType , new SerializationChunkWrapper(delta.getOriginal),
+      new SerializationChunkWrapper(delta.getRevised))
 
   }
 
@@ -22,4 +18,6 @@ class SerializableDelta(val deltaType: DeltaType, val original: SerializableChun
       case DeltaType.INSERT => new InsertDelta[String](original.toChunk, revised.toChunk)
     }
   }
+
+  override def toString: String = s"[type: $deltaType, original: $original, revised: $revised]"
 }

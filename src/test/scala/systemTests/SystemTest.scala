@@ -92,8 +92,7 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
 
       val secondFile = secondDir / fileName
 
-      while (true) {}
-//      Thread sleep 20000
+      Thread sleep 2000
 
       secondFile.lines should be (List(line))
 
