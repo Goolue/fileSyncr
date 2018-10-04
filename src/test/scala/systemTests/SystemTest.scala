@@ -23,6 +23,7 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
 
   // directory for the 1st system
   private val firstDir = File.newTemporaryDirectory(parent = Some(tempFilesDir))
+  val fileName = "someFile.txt"
   firstDir.createIfNotExists(asDirectory = true)
   // directory for the 2nd system
   private val secondDir = File.newTemporaryDirectory(parent = Some(tempFilesDir))
@@ -63,9 +64,7 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
 
   "The other file" must {
     "be created when the first file is created" in {
-      val fileName = "someFile.txt"
       val file = firstDir.createChild(fileName)
-
       file.deleteOnExit()
 
       Thread sleep 2000
@@ -74,8 +73,6 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
     }
 
     "be deleted when the first file is deleted" in {
-      val fileName = "someFile.txt"
-
       // create the file to be deleted
       val file = firstDir.createChild(fileName)
 
@@ -84,6 +81,22 @@ class SystemTest extends TestKit(ActorSystem("system1")) with ImplicitSender
       Thread sleep 2000
 
       (secondDir / fileName).exists should be (false)
+    }
+
+    "be modified when the first file is modified - 1 line" in {
+      val file = firstDir.createChild(fileName)
+      file.deleteOnExit()
+
+      val line = "I am just a lonely line, check me out!"
+      file.appendLine(line)
+
+      val secondFile = secondDir / fileName
+
+      while (true) {}
+//      Thread sleep 20000
+
+      secondFile.lines should be (List(line))
+
     }
   }
 }
