@@ -10,31 +10,26 @@ object Main extends App {
 
   override def main(args: Array[String]): Unit = {
 
+    // get external and local IPs
     val localIp = NetworkUtils.getLocalIp
-    println(s"localIp: $localIp")
     val externalIp = NetworkUtils.getExternalIp
+    println(s"localIp: $localIp")
     println(s"externalIp: $externalIp")
 
+    // create config from application.config
+    var config = ConfigFactory.defaultApplication()
+    println(config.entrySet())
+    // add bind-hostname (local hostname) and hostname (external hostname)
+    config = config.withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(localIp.getOrElse("127.0.0.1")))
+      .withValue("akka.remote.netty.tcp.hostname", ConfigValueFactory.fromAnyRef(externalIp.getOrElse("127.0.0.1")))
+    println(s"using configurations: $config")
 
-    //    val localhost: InetAddress = InetAddress.getLocalHost
-    //    val localIpAddress: String = localhost.getHostAddress
-    //
-    //    println(s"localIpAddress = $localIpAddress")
-    //
-    //    println(ipAddress())
+    // create the actor system
+    val system = ActorSystem("actorSystem", config)
+    println(s"Actor system ${system.name} created. hostname: ${AddressExtension(system).address.host.getOrElse("NO HOST!")}, " +
+      s"port: ${AddressExtension(system).address.port.getOrElse("NO PORT!")}")
 
-    var conf = ConfigFactory.defaultApplication()
-    println(conf.entrySet())
-
-    //    conf = conf.withValue("akka.remote.netty.tcp.bind-port", ConfigValueFactory.fromAnyRef(0))
-    conf = conf.withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(localIp.getOrElse("127.0.0.1")))
-    conf = conf.withValue("akka.remote.netty.tcp.hostname", ConfigValueFactory.fromAnyRef(externalIp.getOrElse("127.0.0.1")))
-    println(conf.entrySet())
-
-    val system = ActorSystem("sys", conf)
-    println(AddressExtension(system).address.port.getOrElse(-1))
-    println(AddressExtension(system).address.host.getOrElse(-1))
-
+    // TODO start ui here
 
     //    val lines1 = List.empty[String]
     //    val lines2 = List("bla bla")
