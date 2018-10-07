@@ -3,6 +3,7 @@ import java.net.{NetworkInterface, SocketException, URL}
 
 import actors.ActorsContainerBuilder
 import akka.actor.ActorSystem
+import better.files.File
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import extensions.AddressExtension
 import utils.NetworkUtils
@@ -11,21 +12,9 @@ object Main extends App {
 
   override def main(args: Array[String]): Unit = {
 
-    // get external and local IPs
-//    val localIp = NetworkUtils.getLocalIp
-//    val externalIp = NetworkUtils.getExternalIp
-//    println(s"localIp: $localIp")
-//    println(s"externalIp: $externalIp")
-
-    // create config from application.config
-//    var config = ConfigFactory.defaultApplication()
-//    println(config.entrySet())
-    // add bind-hostname (local hostname) and hostname (external hostname)
-//    config = config.withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(localIp.getOrElse("127.0.0.1")))
-//      .withValue("akka.remote.netty.tcp.hostname", ConfigValueFactory.fromAnyRef(externalIp.getOrElse("127.0.0.1")))
-//    println(s"using configurations: $config")
-
-    ActorsContainerBuilder.create().build()
+    val container = ActorsContainerBuilder.getInstanceWithIPs()
+      .withDirectory(File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles")
+      .build()
 
 //    // create the actor system
 //    val system = ActorSystem("actorSystem", config)
