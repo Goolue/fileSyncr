@@ -11,7 +11,11 @@ class SerializationPatchWrapper(val deltas: List[SerializationDeltaWrapper]) ext
 
   def toPatch: Patch[String] = {
     val patch = new Patch[String](deltas.size)
-    deltas.foreach(d => patch.addDelta(d.toDelta))
+    deltas
+      .map(d => d.toDelta)
+      .filter(d => d.isDefined)
+      .map(d => d.get)
+      .foreach(d => patch.addDelta(d))
     patch
   }
 

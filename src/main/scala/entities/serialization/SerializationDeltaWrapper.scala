@@ -11,11 +11,14 @@ class SerializationDeltaWrapper(val deltaType: DeltaType, val original: Serializ
 
   }
 
-  def toDelta: Delta[String] = {
+  def toDelta: Option[Delta[String]] = {
     deltaType match {
-      case DeltaType.CHANGE => new ChangeDelta[String](original.toChunk, revised.toChunk)
-      case DeltaType.DELETE => new DeleteDelta[String](original.toChunk, revised.toChunk)
-      case DeltaType.INSERT => new InsertDelta[String](original.toChunk, revised.toChunk)
+      case DeltaType.CHANGE => Some(new ChangeDelta[String](original.toChunk, revised.toChunk))
+      case DeltaType.DELETE => Some(new DeleteDelta[String](original.toChunk, revised.toChunk))
+      case DeltaType.INSERT => Some(new InsertDelta[String](original.toChunk, revised.toChunk))
+      case _ =>
+        println(s"ERROR! unidentifieable deltaType $deltaType")
+        None
     }
   }
 
