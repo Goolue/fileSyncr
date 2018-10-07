@@ -170,7 +170,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       val msg = DiffEventMsg("", new SerializationPatchWrapper(patch), isRemote = false)
       commActor ! msg
 
-      expectMsg(msg)
+      expectMsg(DiffEventMsg(msg.path, msg.patch, isRemote = true))
     }
 
     "send an ApplyPatchMsg msg when receiving a DiffEventMsg with isRemote = true" in {
