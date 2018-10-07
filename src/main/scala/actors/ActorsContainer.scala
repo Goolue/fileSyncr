@@ -10,6 +10,8 @@ import com.typesafe.config.Config
 import extensions.AddressExtension
 import utils.NetworkUtils
 
+import scala.util.Random
+
 /**
   * A container to create and build the `ActorSystem` and `Actor`s.
   *
@@ -26,13 +28,15 @@ class ActorsContainer(val system: ActorSystem, val localIp: String)(implicit val
     * @param localIp          the local (internal) IP to be used behind a NAT, Load Balancers or Docker containers.
     *                         If the IP is invalid, an exception will be thrown.
     * @param actorSystemName  the name to give to the `ActorSystem`, defaults to `ActorsContainerBuilder.DEFAULT_ACTOR_SYSTEM_NAME`.
+    *                         The actual name given to the system will be like <actorSystemName>_<random int>
     * @param watchedDirectory the directory to watch files in. If watchedDirectory does not exist or is not a directory,
     *                         an exception will be thrown!
     * @param config           the `Config` to use for the `ActorSystem`.
     */
   def this(localIp: String, actorSystemName: String)(implicit config: Config, watchedDirectory: File) {
     this ({
-      val system = ActorSystem(actorSystemName, config)
+      val systemNameWithRandNum = s"${actorSystemName}_${Random.nextInt()}"
+      val system = ActorSystem(systemNameWithRandNum , config)
 
       val port: Option[Int] = AddressExtension(system).address.port
       val externalIp = AddressExtension(system).address.host
@@ -66,6 +70,9 @@ class ActorsContainer(val system: ActorSystem, val localIp: String)(implicit val
 
 
 object ActorsContainer {
-  // default commActor name
-  val COMM_ACTOR_NAME = "commActor"
+  private val rand = Random.nextInt()
+
+  val COMM_ACTOR_NAME = s"commActor_$rand"
+  val FILE_HANDLER_NAME = s"fileHandler_$rand"
+  val DIFF_ACTOR_NAME = s"diffActor_$rand"
 }

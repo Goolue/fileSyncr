@@ -34,6 +34,7 @@ class ActorsContainerBuilder(private val localIp: String, private val externalIp
     else if (!directory.isDirectory) {
       throw new Exception(s"$directory is not a directory!")
     } else {
+      println(s"Using directory $directory")
       new ActorsContainerBuilder(localIp, externalIp, actorSysName, Some(directory), config)
     }
   }
