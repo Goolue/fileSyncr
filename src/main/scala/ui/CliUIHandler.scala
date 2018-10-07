@@ -1,18 +1,9 @@
 package ui
 
 import akka.actor.ActorSystem
+import utils.NetworkUtils
 
 class CliUIHandler(private val actorSystem: ActorSystem) extends UIHandler(actorSystem) with Output with Input {
-
-  private def isValidIP(input: String) = {
-    // TODO
-    true
-  }
-
-  private def isValidPort(input: String) = {
-    // TODO
-    true
-  }
 
   override def displayMainScreen(): Unit = {
     print("Hello!")
@@ -21,13 +12,13 @@ class CliUIHandler(private val actorSystem: ActorSystem) extends UIHandler(actor
   override def displayConnectToSomeoneScreen(): Unit = {
     print("Please enter an IP")
     var input = read()
-    while (!isValidIP(input)) {
+    while (!NetworkUtils.isValidIp(input)) {
       print("Invalid IP, please try again")
       input = read()
     }
     print("Please enter a port")
     input = read()
-    while (!isValidPort(input)) {
+    while (!NetworkUtils.isValidPort(input)) {
       print("Invalid port, please try again")
       input = read()
     }

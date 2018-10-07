@@ -48,7 +48,7 @@ class CliUIHandlerTest extends TestKit(ActorSystem("system1")) with ImplicitSend
       ui.outMsgs should contain("Hello!")
     }
 
-    "print ask for an IP when displayConnectToSomeoneScreen is called" in {
+    "ask for an IP when displayConnectToSomeoneScreen is called" in {
       ui.inMsgs = Seq("127.0.0.1", "1000")
       ui.displayConnectToSomeoneScreen()
       ui.outMsgs should contain("Please enter an IP")
@@ -58,6 +58,63 @@ class CliUIHandlerTest extends TestKit(ActorSystem("system1")) with ImplicitSend
       ui.inMsgs = Seq("127.0.0.1", "1000")
       ui.displayConnectToSomeoneScreen()
       ui.outMsgs should contain("Please enter a port")
+    }
+
+    def testInvalidIP = {
+      ui.displayConnectToSomeoneScreen()
+      ui.outMsgs should contain("Invalid IP, please try again")
+    }
+
+    "ask again for IP when entering an invalid IP (with ' ') when displayConnectToSomeoneScreen is called" in {
+      ui.inMsgs = Seq("some ip","127.0.0.1", "1000")
+      testInvalidIP
+    }
+
+    "ask again for IP when entering an invalid IP (too long number) when displayConnectToSomeoneScreen is called" in {
+      ui.inMsgs = Seq("127.0.0000.1", "127.0.0.1", "1000")
+      testInvalidIP
+    }
+
+    "ask again for IP when entering an invalid IP (with '..') when displayConnectToSomeoneScreen is called" in {
+      ui.inMsgs = Seq("127.0..1", "127.0.0.1", "1000")
+      testInvalidIP
+    }
+
+
+    "ask again for IP when entering an invalid IP (too many numbers) when displayConnectToSomeoneScreen is called" in {
+      ui.inMsgs = Seq("127.0.0.1.3", "127.0.0.1", "1000")
+      testInvalidIP
+    }
+
+    def testInvalidPort = {
+      ui.displayConnectToSomeoneScreen()
+      ui.outMsgs should contain("Invalid port, please try again")
+    }
+
+    "ask again for a port when receiving an invalid port (not number) after displayConnectToSomeoneScreen is called" in {
+      ui.inMsgs = Seq("127.0.0.1", "a", "1000")
+      testInvalidPort
+    }
+
+
+    "ask again for a port when receiving an invalid port (neg num) after displayConnectToSomeoneScreen is called" in {
+      ui.inMsgs = Seq("127.0.0.1", "-1000", "1000")
+      testInvalidPort
+    }
+
+    "ask again for a port when receiving an invalid port (0) after displayConnectToSomeoneScreen is called" in {
+      ui.inMsgs = Seq("127.0.0.1", "0", "1000")
+      testInvalidPort
+    }
+
+    "ask again for a port when receiving an invalid port (float) after displayConnectToSomeoneScreen is called" in {
+      ui.inMsgs = Seq("127.0.0.1", "12.5", "1000")
+      testInvalidPort
+    }
+
+    "ask again for a port when receiving an invalid port (too big num) after displayConnectToSomeoneScreen is called" in {
+      ui.inMsgs = Seq("127.0.0.1", "100000", "1000")
+      testInvalidPort
     }
   }
 

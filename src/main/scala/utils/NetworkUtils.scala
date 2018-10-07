@@ -12,12 +12,33 @@ object NetworkUtils {
     println(msg)
   }
 
+  def isValidPort(input: String): Boolean = {
+    val MAX_PORT_NUM = 65535
+    try {
+      val num = input.toInt
+      0 < num && num <= MAX_PORT_NUM
+    } catch {
+      case _: Throwable => false
+    }
+  }
+
+  def isValidIp(ip: String): Boolean = {
+    ip.forall(c => c.isLetterOrDigit || c == '.') && !ip.contains("..") && {
+      if (!ip.exists(c => c.isLetter)){
+        val split = ip.split('.')
+        split.length == 4 && split.forall(num => num.length > 0 && num.length <= 3)
+      }
+      else true
+    }
+  }
+  
   // taken, with modifications, from https://stackoverflow.com/a/38393486
   def getExternalIp: Option[String] = {
     val whatIsMyIpURL = new URL("http://checkip.amazonaws.com")
     try {
       val in: BufferedReader = new BufferedReader(new InputStreamReader(whatIsMyIpURL.openStream()))
-      Some(in.readLine())
+      val ip = in.readLine()
+      Some(ip).filter(isValidIp)
     }
     catch {
       case e: Throwable =>
@@ -36,7 +57,7 @@ object NetworkUtils {
         .map(address => address.getCanonicalHostName)
         .toList
       log(s"found ${addresses.size} addresses: $addresses")
-      addresses.find(_ => true)
+      addresses.find(_ => true).filter(isValidIp)
     }
     catch {
       case e: Throwable =>
