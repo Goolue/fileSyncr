@@ -24,6 +24,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
   private val tempFileDir: File = File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles"
   val file: File = File.newTemporaryFile("someFile", ".txt", Some(tempFileDir))
+  file.createIfNotExists()
 
   var fileHandler: ActorRef = _
 
@@ -74,6 +75,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       expectMsg(false)
     }
 
+    // TODO does not pass when running all tests in system (passes when running only this file)
     "update it's map when receiving a FileModifiedMsg" in {
       val msg = FileModifiedMsg(FileUtils.getFileAsRelativeStr(file, tempFileDir))
       fileHandler ! msg
@@ -88,6 +90,8 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       file.write(TEXT_IN_FILE)
 
     }
+
+    // TODO does not pass when running all tests in system (passes when running only this file)
     "send a ModificationDataMsg with the correct path, None old lines, and new lines when " +
       "receiving a FileModifiedMsg for the first time" in {
       val pathStr = FileUtils.getFileAsRelativeStr(file, tempFileDir)
@@ -103,6 +107,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       file.write(TEXT_IN_FILE)
     }
 
+    // TODO does not pass when running all tests in system (passes when running only this file)
     "NOT have the path of the file to it's map when receiving a FileDeletedMsg" in {
       //send a file mod msg so the path will be in the map
       val modMsg = FileModifiedMsg(FileUtils.getFileAsRelativeStr(file, tempFileDir))
@@ -124,6 +129,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
     }
 
+    // TODO does not pass when running all tests in system (passes when running only this file)
     "send the same FileDeletedMsg to the commActor when receiving a FileDeletedMsg with isRemote = false" in {
       //send a file mod msg so the path will be in the map
       val modMsg = FileModifiedMsg(FileUtils.getFileAsRelativeStr(file, tempFileDir))
