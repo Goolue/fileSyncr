@@ -13,6 +13,7 @@ class ActorsContainerBuilder(private val localIp: String, private val externalIp
 
   /**
     * get a <b>new</b> instance of `ActorsContainerBuilder` with all fields equal to this one, but actorSysName = Some(`name`).
+    *
     * @param name the name to give to the `ActorSystem` that will be created when build() is called.
     * @return a <b>new</b> instance of `ActorsContainerBuilder` with all fields equal to this one, but actorSysName = Some(`name`).
     */
@@ -21,12 +22,13 @@ class ActorsContainerBuilder(private val localIp: String, private val externalIp
 
   /**
     * get a <b>new</b> instance of `ActorsContainerBuilder` with all fields equal to this one, but dir = Some(`directory`).
+    *
     * @param directory the directory the application will watch for changes in.
     *                  If directory doesn't exist or is not a directory, an exception will be thrown
     * @return a <b>new</b> instance of `ActorsContainerBuilder` with all fields equal to this one, but dir = Some(`directory`).
     */
   def withDirectory(directory: File): ActorsContainerBuilder = {
-    if (!directory.exists){
+    if (!directory.exists) {
       throw new FileNotFoundException(s"$directory does not exist!")
     }
     else if (!directory.isDirectory) {
@@ -38,6 +40,7 @@ class ActorsContainerBuilder(private val localIp: String, private val externalIp
 
   /**
     * get a <b>new</b> instance of `ActorsContainerBuilder` with all fields equal to this one, but config = Some(`conf`).
+    *
     * @param conf the `Config` to use for the `ActorSystem`
     * @return a <b>new</b> instance of `ActorsContainerBuilder` with all fields equal to this one, but config = Some(`conf`).
     */
@@ -45,6 +48,7 @@ class ActorsContainerBuilder(private val localIp: String, private val externalIp
 
   /**
     * Create an instance of `ActorsContainer` with parameters equal to this'.
+    *
     * @return an instance of `ActorsContainer` with parameters equal to this'.
     *         If no `actorSysName` was supplied, ActorsContainerBuilder.DEFAULT_ACTOR_SYSTEM_NAME will be used.
     *         If no `dir` was supplied, File.home will be used.
@@ -52,13 +56,12 @@ class ActorsContainerBuilder(private val localIp: String, private val externalIp
     *         akka.remote.netty.tcp.bind-hostname = localIp, akka.remote.netty.tcp.hostname = externalIp will be used.
     */
   def build(): ActorsContainer = {
-    implicit val actualSysName: String = actorSysName.getOrElse(ActorsContainerBuilder.DEFAULT_ACTOR_SYSTEM_NAME)
+    val actualSysName: String = actorSysName.getOrElse(ActorsContainerBuilder.DEFAULT_ACTOR_SYSTEM_NAME)
     implicit val actualDir: File = dir.filter(d => d.isDirectory).getOrElse(File.home)
-    implicit val actualConfig: Config = config.getOrElse(ConfigFactory.defaultApplication()
-      .withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(localIp))
-      .withValue("akka.remote.netty.tcp.hostname", ConfigValueFactory.fromAnyRef(externalIp)))
+    implicit val actualConfig = ActorsContainerBuilder.buildConfigWithIPs(localIp, externalIp,
+      config.getOrElse(ConfigFactory.defaultApplication()))
 
-    new ActorsContainer(localIp, externalIp)
+    new ActorsContainer(localIp, actualSysName)
   }
 }
 
@@ -68,6 +71,7 @@ object ActorsContainerBuilder {
   /**
     * Create the initial `ActorsContainerBuilder` with local and external IPs.
     * If cannot get the local or the external IP, an exception will be thrown.
+    *
     * @return an Instance of ActorsContainerBuilder with internal and external IPs configured.
     */
   def getInstanceWithIPs: ActorsContainerBuilder = {
@@ -80,5 +84,10 @@ object ActorsContainerBuilder {
     val externalIp = externalIpOption.get
 
     new ActorsContainerBuilder(localIp, externalIp)
+  }
+
+  def buildConfigWithIPs(localIp: String, externalIp: String, config: Config = ConfigFactory.defaultApplication()): Config = {
+    config.withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(localIp))
+      .withValue("akka.remote.netty.tcp.hostname", ConfigValueFactory.fromAnyRef(externalIp))
   }
 }

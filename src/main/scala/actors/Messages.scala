@@ -10,15 +10,16 @@ import entities.serialization.SerializationPatchWrapper
 object Messages {
 
   type StringPatch = Patch[String]
+  trait Message
 
-  sealed trait FileEventMessage
+  sealed trait FileEventMessage extends Message
   object FileEventMessage {
     case class FileCreatedMsg(path: String, isRemote: Boolean = false) extends FileEventMessage
     case class FileDeletedMsg(path: String, isRemote: Boolean = false) extends FileEventMessage
     case class FileModifiedMsg(path: String, isRemote: Boolean = false) extends FileEventMessage
   }
 
-  sealed trait EventDataMessage
+  sealed trait EventDataMessage extends Message
   object EventDataMessage {
     case class ModificationDataMsg(path: String, newLines: Traversable[String],
                                    implicit val oldLines: Option[Traversable[String]] = None) extends EventDataMessage
@@ -27,7 +28,7 @@ object Messages {
     case class UpdateFileMsg(path: String, lines: Traversable[String]) extends EventDataMessage
   }
 
-  sealed trait GetterMsg
+  sealed trait GetterMsg extends Message
   object GetterMsg {
     case class GetLinesMsg(path: String, patch: StringPatch) extends GetterMsg
     case class OldLinesMsg(lines: Traversable[String], path: String, patch: StringPatch) extends GetterMsg

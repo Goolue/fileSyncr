@@ -1,10 +1,14 @@
 package ui
 
-import actors.ActorsContainerBuilder
-import akka.actor.ActorSystem
+import actors.CommActor.HasConnectionQuery
+import actors.{ActorsContainer, ActorsContainerBuilder}
+import actors.Messages.Message
+import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
+import com.typesafe.config.Config
 import org.scalatest._
+import utils.NetworkUtils
 
 class CliUIHandlerTest extends TestKit(ActorSystem("system1")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
@@ -30,10 +34,22 @@ class CliUIHandlerTest extends TestKit(ActorSystem("system1")) with ImplicitSend
     }
   }
 
+  private trait MockSendingMsgsToActor {
+    def sendMsgsToCommActor(msg: Message): Unit
+  }
+
   private var ui: CliUIHandler with MockOutput with MockInput= _
-  private val container = ActorsContainerBuilder.getInstanceWithIPs
-    .withDirectory(File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles")
-    .build()
+
+  private val localIp = NetworkUtils.getLocalIp.get
+  private val externalIp = NetworkUtils.getExternalIp.get
+
+  private implicit val config: Config = ActorsContainerBuilder.buildConfigWithIPs(localIp, externalIp)
+  private implicit val dir: File = File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles"
+  private val container = new ActorsContainer(NetworkUtils.getLocalIp.get, "testSystem") with MockSendingMsgsToActor {
+    override def sendMsgsToCommActor(msg: Message): Unit = {
+      system.actorSelection(system / ActorsContainer.COMM_ACTOR_NAME) ! msg
+    }
+  }
 
   before {
     ui = new CliUIHandler(container) with MockOutput with MockInput
@@ -122,10 +138,14 @@ class CliUIHandlerTest extends TestKit(ActorSystem("system1")) with ImplicitSend
       testInvalidPort
     }
 
-//    "add the remote connection for the IP when displayConnectToSomeoneScreen is called" in {
-//      ui.inMsgs = Seq("127.0.0.1", "1000")
-//
-//    }
+    "add the remote connection for the IP when displayConnectToSomeoneScreen is called" in {
+      val ip = "127.0.0.1"
+      ui.inMsgs = Seq(ip, "1000")
+      ui.displayConnectToSomeoneScreen()
+      container.sendMsgsToCommActor(HasConnectionQuery(ip))
+
+      expectMsg(true)
+    }
   }
 
 }

@@ -3,6 +3,7 @@ package actors
 import actors.CommActor._
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
+import actors.Messages.Message
 import akka.actor.{ActorRef, ActorSelection}
 import akka.routing.{BroadcastRoutingLogic, Routee, Router}
 
@@ -18,8 +19,9 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
 
   def handleMassages(connections: Map[String, ActorSelection], router: Router): Receive = {
     case HasConnectionQuery(msgUrl) =>
-      log.info(s"$getClassName got an HasConnectionQuery for msgUrl $msgUrl")
-      sender() ! connections.contains(msgUrl)
+      val res = connections.contains(msgUrl)
+      log.info(s"$getClassName got an HasConnectionQuery for msgUrl $msgUrl, returning $res")
+      sender() ! res
 
     case AddRemoteConnectionMsg(msgUrl, port, actorPathStr, systemName) =>
       log.info(s"$getClassName got an AddRemoteConnectionMsg for msgUrl $msgUrl, port $port, actor $actorPathStr")
@@ -95,10 +97,9 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
 }
 
 object CommActor {
-  sealed class RemoteConnectionMsg
+  sealed trait RemoteConnectionMsg extends Message
   case class AddRemoteConnectionMsg(url: String, port: Int, actorClass: String, systemName: Option[String] = None) extends RemoteConnectionMsg
   case class RemoveRemoteConnectionMsg(url: String, msg: Option[String] = None) extends RemoteConnectionMsg
   case class HasConnectionQuery(url: String) extends RemoteConnectionMsg
-
   case class DisconnectMsg(msg: Option[String] = None) extends RemoteConnectionMsg
 }
