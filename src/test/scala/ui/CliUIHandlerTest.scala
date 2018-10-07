@@ -1,7 +1,9 @@
 package ui
 
+import actors.ActorsContainerBuilder
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
+import better.files.File
 import org.scalatest._
 
 class CliUIHandlerTest extends TestKit(ActorSystem("system1")) with ImplicitSender
@@ -29,9 +31,12 @@ class CliUIHandlerTest extends TestKit(ActorSystem("system1")) with ImplicitSend
   }
 
   private var ui: CliUIHandler with MockOutput with MockInput= _
+  private val container = ActorsContainerBuilder.getInstanceWithIPs
+    .withDirectory(File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles")
+    .build()
 
   before {
-    ui = new CliUIHandler(system) with MockOutput with MockInput
+    ui = new CliUIHandler(container) with MockOutput with MockInput
   }
 
   after {
@@ -116,6 +121,11 @@ class CliUIHandlerTest extends TestKit(ActorSystem("system1")) with ImplicitSend
       ui.inMsgs = Seq("127.0.0.1", "100000", "1000")
       testInvalidPort
     }
+
+//    "add the remote connection for the IP when displayConnectToSomeoneScreen is called" in {
+//      ui.inMsgs = Seq("127.0.0.1", "1000")
+//
+//    }
   }
 
 }

@@ -1,9 +1,9 @@
 package ui
 
-import akka.actor.ActorSystem
+import actors.ActorsContainer
 import utils.NetworkUtils
 
-class CliUIHandler(private val actorSystem: ActorSystem) extends UIHandler(actorSystem) with Output with Input {
+class CliUIHandler(private val actorsContainer: ActorsContainer) extends UIHandler(actorsContainer) with Output with Input {
 
   override def displayMainScreen(): Unit = {
     print("Hello!")
@@ -16,13 +16,18 @@ class CliUIHandler(private val actorSystem: ActorSystem) extends UIHandler(actor
       print("Invalid IP, please try again")
       input = read()
     }
+    val ip = input
+
     print("Please enter a port")
     input = read()
     while (!NetworkUtils.isValidPort(input)) {
       print("Invalid port, please try again")
       input = read()
     }
+    val port = input.toInt
 
-    // TODO
+    actorsContainer.addRemoteConnection(ip, port)
   }
+
+
 }

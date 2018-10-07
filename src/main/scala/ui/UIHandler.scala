@@ -1,8 +1,8 @@
 package ui
 
-import akka.actor.ActorSystem
+import actors.ActorsContainer
 
-abstract class UIHandler(actorSystem: ActorSystem) {
+abstract class UIHandler(actorsContainer: ActorsContainer) {
   def displayMainScreen(): Unit
   def displayConnectToSomeoneScreen(): Unit
 

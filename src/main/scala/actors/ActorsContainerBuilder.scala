@@ -70,7 +70,7 @@ object ActorsContainerBuilder {
     * If cannot get the local or the external IP, an exception will be thrown.
     * @return an Instance of ActorsContainerBuilder with internal and external IPs configured.
     */
-  def getInstanceWithIPs(): ActorsContainerBuilder = {
+  def getInstanceWithIPs: ActorsContainerBuilder = {
     val localIpOption = NetworkUtils.getLocalIp
     if (localIpOption.isEmpty) throw new IOException("cannot get local IP")
     val externalIpOption = NetworkUtils.getExternalIp

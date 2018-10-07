@@ -12,7 +12,7 @@ object Main extends App {
 
   override def main(args: Array[String]): Unit = {
 
-    val container = ActorsContainerBuilder.getInstanceWithIPs()
+    val container = ActorsContainerBuilder.getInstanceWithIPs
       .withDirectory(File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles")
       .build()
 

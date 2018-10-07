@@ -3,6 +3,7 @@ package actors
 import java.io.FileNotFoundException
 import java.net.MalformedURLException
 
+import actors.CommActor.AddRemoteConnectionMsg
 import akka.actor.{ActorRef, ActorSystem, Props}
 import better.files.File
 import com.typesafe.config.Config
@@ -45,6 +46,10 @@ class ActorsContainer(val localIp: String, val externalIp: String)(implicit priv
       s"port: ${port.get}, external ip: $externalIp")
 
     system
+  }
+
+  def addRemoteConnection(ip: String, port: Int): Unit = {
+    commActor ! AddRemoteConnectionMsg(ip, port, ActorsContainer.COMM_ACTOR_NAME, Some(actorSystemName))
   }
 
 }
