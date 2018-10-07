@@ -1,20 +1,23 @@
-import java.io.{BufferedReader, InputStreamReader}
-import java.net.{NetworkInterface, SocketException, URL}
-
 import actors.ActorsContainerBuilder
-import akka.actor.ActorSystem
 import better.files.File
-import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import extensions.AddressExtension
-import utils.NetworkUtils
+import ui.CliUIHandler
 
 object Main extends App {
 
   override def main(args: Array[String]): Unit = {
 
+    val file = {
+      if (args.length == 0) File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles"
+      else File.apply(args(0))
+    }
     val container = ActorsContainerBuilder.getInstanceWithIPs
-      .withDirectory(File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles")
+      .withDirectory(file)
+//      .withDirectory(File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles")
       .build()
+
+    val ui = new CliUIHandler(container)
+    ui.displayMainScreen()
+    ui.displayConnectToSomeoneScreen()
 
 //    // create the actor system
 //    val system = ActorSystem("actorSystem", config)

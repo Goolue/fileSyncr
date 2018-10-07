@@ -8,35 +8,11 @@ import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
 import com.typesafe.config.Config
 import org.scalatest._
+import testHelpers.Traits.{MockInput, MockOutput, MockSendingMsgsToActor}
 import utils.NetworkUtils
 
 class CliUIHandlerTest extends TestKit(ActorSystem("system1")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
-
-  private trait MockOutput extends Output {
-    var outMsgs: Seq[String] = Seq()
-
-    override def print(s: String): Unit = {
-      super.print(s)
-      outMsgs = outMsgs :+ s
-    }
-  }
-
-  private trait MockInput extends Input {
-    var inMsgs: Seq[String] = Seq()
-    private[this] var currIndex: Int = 0
-
-    override def read(): String = {
-      val res = inMsgs(currIndex)
-      println(s"read $res")
-      currIndex += 1
-      res
-    }
-  }
-
-  private trait MockSendingMsgsToActor {
-    def sendMsgsToCommActor(msg: Message): Unit
-  }
 
   private var ui: CliUIHandler with MockOutput with MockInput= _
 
