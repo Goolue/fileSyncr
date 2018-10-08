@@ -29,4 +29,5 @@ object Traits {
   trait MockSendingMsgsToActor {
     def sendMsgsToCommActor(msg: Message): Unit
   }
+
 }

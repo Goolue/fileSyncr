@@ -1,7 +1,14 @@
 package utils
 
 import java.io.{BufferedReader, InputStreamReader}
-import java.net.{NetworkInterface, URL}
+import java.net.{InetAddress, NetworkInterface, URL}
+
+import org.fourthline.cling.UpnpServiceImpl
+import org.fourthline.cling.model.meta.{LocalDevice, RemoteDevice}
+import org.fourthline.cling.registry.{Registry, RegistryListener}
+
+import org.fourthline.cling.support.igd.PortMappingListener
+import org.fourthline.cling.support.model.PortMapping
 
 import scala.collection.JavaConverters._
 
@@ -64,7 +71,50 @@ object NetworkUtils {
         log(s"could not get local IP. exception is: ${e.getMessage}")
         None
     }
-
   }
+
+  def getUPnPService: UpnpServiceImpl = {
+    val listener = new RegistryListener {
+      override def remoteDeviceAdded(registry: Registry, device: RemoteDevice): Unit =
+        println(s"remote device added. device: ${device.getDisplayString}, registry: $registry")
+
+      override def remoteDeviceRemoved(registry: Registry, device: RemoteDevice): Unit =
+        println(s"remote device removed. device: ${device.getDisplayString}, registry: $registry")
+
+      override def localDeviceRemoved(registry: Registry, device: LocalDevice): Unit =
+        println(s"local device added. device: ${device.getDisplayString}, registry: $registry")
+
+      override def localDeviceAdded(registry: Registry, device: LocalDevice): Unit =
+        println(s"local device added. device: ${device.getDisplayString}, registry: $registry")
+
+      override def afterShutdown(): Unit =
+        println(s"after shutdown")
+
+      override def beforeShutdown(registry: Registry): Unit =
+        println(s"before shutdown. registry: $registry")
+
+      override def remoteDeviceUpdated(registry: Registry, device: RemoteDevice): Unit =
+        println(s"discovery updated: ${device.getDisplayString}")
+
+      override def remoteDeviceDiscoveryStarted(registry: Registry, device: RemoteDevice): Unit =
+        println(s"discovery started: ${device.getDisplayString}")
+
+      override def remoteDeviceDiscoveryFailed(registry: Registry, device: RemoteDevice, ex: Exception): Unit =
+        println(s"discovery failed: ${device.getDisplayString}, ex: $ex")
+    }
+
+    println("starting Cling")
+
+    new UpnpServiceImpl(listener)
+  }
+
+  def bindPort(upnpService: UpnpServiceImpl, port: Int, protocol: PortMapping.Protocol,
+               internalClient: String = InetAddress.getLocalHost.getHostAddress): Unit = {
+    println(s"binding port $port")
+    val registryListener = new PortMappingListener(new PortMapping(port, internalClient, protocol))
+    upnpService.getRegistry.addListener(registryListener)
+  }
+
+
 
 }

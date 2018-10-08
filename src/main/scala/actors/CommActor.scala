@@ -9,7 +9,7 @@ import akka.routing.{BroadcastRoutingLogic, Routee, Router}
 
 class CommActor(private val url: String, private val diffActor: ActorRef,
                 private val fileHandlerActor: ActorRef) extends BasicActor {
-  println(s"${self.path} created with url $url")
+  log.info(s"${self.path.toStringWithoutAddress} created with url $url")
 
   def receive: Receive = handleMassages(Map.empty, Router(BroadcastRoutingLogic(), Vector.empty[Routee]))
 
