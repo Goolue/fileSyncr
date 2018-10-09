@@ -1,5 +1,8 @@
 package actors
 
+import java.time.Duration
+import java.util.concurrent.{CompletionStage, TimeUnit}
+
 import actors.CommActor._
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
@@ -7,6 +10,8 @@ import actors.Messages.Message
 import akka.actor.{ActorRef, ActorSelection}
 import akka.event.LoggingReceive
 import akka.routing.{BroadcastRoutingLogic, Routee, Router}
+
+import scala.concurrent.duration.{Duration, FiniteDuration}
 
 class CommActor(private val url: String, private val diffActor: ActorRef,
                 private val fileHandlerActor: ActorRef) extends BasicActor {
@@ -34,9 +39,21 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
           case "" => log.info(s"$getClassName got an empty msgUrl")
           case _ =>
             if (!connections.contains(msgUrl) && isValidUrl(msgUrl)) {
-              val selection = context.actorSelection(createRemotePath(msgUrl, systemName, port, actorPathStr))
-//              router = router.addRoutee(selection)
-              context become handleMassages(connections.updated(msgUrl, selection), router.addRoutee(selection))
+              val generatedActorPath = createRemotePath(msgUrl, systemName, port, actorPathStr)
+              log.debug(s"generated actor path for selection: $generatedActorPath")
+              val selection = context.actorSelection(generatedActorPath)
+
+              // see if the connection is successful, wait up to 3 seconds for the result
+              selection.resolveOne(FiniteDuration.apply(5, TimeUnit.SECONDS))
+                .onComplete(t => {
+                  if (t.isFailure) {
+                    log.error(t.failed.get.getMessage)
+                  }
+                  else {
+                    log.debug(s"connection successful with actor ${t.get.path}")
+                    context become handleMassages(connections.updated(msgUrl, selection), router.addRoutee(selection))
+                  }
+                })(context.dispatcher)
             }
             else log.info(s"$getClassName got an invalid msgUrl $msgUrl")
         }
@@ -94,7 +111,7 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
   }
 
   private def createRemotePath (url: String, systemName: Option[String], port: Int, actorClass: String): String = {
-    s"$protocol://${systemName.getOrElse(context.system.name)}@$url:$port$actorClass"
+    s"$protocol://${systemName.getOrElse(context.system.name)}@$url:$port/user/$actorClass"
   }
 }
 

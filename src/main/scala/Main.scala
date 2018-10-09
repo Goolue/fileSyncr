@@ -11,7 +11,7 @@ object Main extends App {
   override def main(args: Array[String]): Unit = {
     val upnpService = NetworkUtils.getUPnPService
 
-    upnpService.getControlPoint.search(new STAllHeader)
+//    upnpService.getControlPoint.search(new STAllHeader)
 
     val file = {
       if (args.length == 0) File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles"
@@ -23,7 +23,7 @@ object Main extends App {
       .build()
 
 
-    NetworkUtils.bindPort(upnpService, AddressExtension(container.system).address.port.get, PortMapping.Protocol.TCP)
+//    NetworkUtils.bindPort(upnpService, AddressExtension(container.system).address.port.get, PortMapping.Protocol.TCP)
 
     println(s"hostname: ${container.system.settings.config.getAnyRef("akka.remote.netty.tcp.hostname")} " +
       s"bind-hostname: ${container.system.settings.config.getAnyRef("akka.remote.netty.tcp.bind-hostname")} " +

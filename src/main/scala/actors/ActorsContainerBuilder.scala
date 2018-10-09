@@ -88,9 +88,11 @@ object ActorsContainerBuilder {
   }
 
   def buildConfigWithIPs(localIp: String, externalIp: String, config: Config = ConfigFactory.defaultApplication()): Config = {
-    config.withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(localIp))
-      .withValue("akka.remote.netty.tcp.hostname", ConfigValueFactory.fromAnyRef(externalIp))
-      .withValue("akka.remote.netty.tcp.bind-port", ConfigValueFactory.fromAnyRef(""))
+    config
+//      .withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(localIp))
+      .withValue("akka.remote.netty.tcp.hostname", ConfigValueFactory.fromAnyRef(localIp))
+//      .withValue("akka.remote.netty.tcp.hostname", ConfigValueFactory.fromAnyRef(externalIp))
+//      .withValue("akka.remote.netty.tcp.bind-port", ConfigValueFactory.fromAnyRef(""))
       .withValue("akka.remote.netty.tcp.port", ConfigValueFactory.fromAnyRef(0))
   }
 }

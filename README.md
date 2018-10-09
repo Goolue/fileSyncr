@@ -15,6 +15,6 @@ WIP app that allows working on multiple text files from multiple computers at th
 
 * move to ssl
 
-* add some authentication method (maybe like TeamView has)
+* add some authentication method
 
  
