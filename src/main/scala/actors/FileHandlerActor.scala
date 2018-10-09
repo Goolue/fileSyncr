@@ -5,6 +5,7 @@ import actors.Messages.EventDataMessage.{ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.FileEventMessage._
 import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
 import akka.actor.ActorRef
+import akka.event.LoggingReceive
 import better.files.File
 import better.files.File.RandomAccessMode
 
@@ -110,7 +111,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
     }
   }
 
-  def handleMessages(pathToLines: Map[String, LinesOption], filesMonitorMap: Set[String]): Receive = {
+  def handleMessages(pathToLines: Map[String, LinesOption], filesMonitorMap: Set[String]): Receive = LoggingReceive {
 
     //MapQueryMsg, mostly used for testing
     case MapContainsKeyMsg(path) =>

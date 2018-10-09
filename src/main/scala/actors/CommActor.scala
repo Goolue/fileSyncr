@@ -5,6 +5,7 @@ import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
 import actors.Messages.Message
 import akka.actor.{ActorRef, ActorSelection}
+import akka.event.LoggingReceive
 import akka.routing.{BroadcastRoutingLogic, Routee, Router}
 
 class CommActor(private val url: String, private val diffActor: ActorRef,
@@ -17,14 +18,15 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
 
 //  private var router: Router = Router(BroadcastRoutingLogic(), Vector.empty[Routee])
 
-  def handleMassages(connections: Map[String, ActorSelection], router: Router): Receive = {
+  def handleMassages(connections: Map[String, ActorSelection], router: Router): Receive = LoggingReceive {
     case HasConnectionQuery(msgUrl) =>
       val res = connections.contains(msgUrl)
       log.info(s"$getClassName got an HasConnectionQuery for msgUrl $msgUrl, returning $res")
       sender() ! res
 
     case AddRemoteConnectionMsg(msgUrl, port, actorPathStr, systemName) =>
-      log.info(s"$getClassName got an AddRemoteConnectionMsg for msgUrl $msgUrl, port $port, actor $actorPathStr")
+      log.info(s"$getClassName got an AddRemoteConnectionMsg for msgUrl $msgUrl, port $port, actor $actorPathStr, " +
+        s"system $systemName")
       if (port <= 0) log.warning(s"port $port <= 0 !")
       else {
         msgUrl match {

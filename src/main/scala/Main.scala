@@ -9,7 +9,6 @@ import utils.NetworkUtils
 object Main extends App {
 
   override def main(args: Array[String]): Unit = {
-
     val upnpService = NetworkUtils.getUPnPService
 
     upnpService.getControlPoint.search(new STAllHeader)
@@ -22,6 +21,7 @@ object Main extends App {
       .withDirectory(file)
       //      .withDirectory(File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles")
       .build()
+
 
     NetworkUtils.bindPort(upnpService, AddressExtension(container.system).address.port.get, PortMapping.Protocol.TCP)
 

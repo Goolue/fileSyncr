@@ -26,7 +26,18 @@ class CliUIHandler(private val actorsContainer: ActorsContainer) extends UIHandl
     }
     val port = input.toInt
 
-    actorsContainer.addRemoteConnection(ip, port)
+    print("Please enter the remote system's number")
+    input = read()
+    var sysNumOpt = tryToParseSystemNumber(input)
+    while (sysNumOpt.isEmpty) {
+      print("Invalid system number, please try again")
+      input = read()
+      sysNumOpt = tryToParseSystemNumber(input)
+    }
+    val systemNumber = sysNumOpt.get
+
+
+    actorsContainer.addRemoteConnection(ip, port, systemNumber)
   }
 
 

@@ -13,29 +13,33 @@ import utils.NetworkUtils
 import scala.util.Random
 
 /**
-  * A container to create and build the `ActorSystem` and `Actor`s.
+  * A container to create and build the [[ActorSystem]] and [[akka.actor.Actor]]s.
   *
-  * @param system           the `ActorSystem` to use.
+  * @param system           the [[ActorSystem]] to use. The system's name must be of the form <x>_<non-negative integer>
+  *                           where x does not contain '_'
   * @param localIp          the local (internal) IP to be used behind a NAT, Load Balancers or Docker containers.
   * @param watchedDirectory the directory to watch files in. If watchedDirectory does not exist or is not a directory,
   *                         an exception will be thrown!
   */
-class ActorsContainer(val system: ActorSystem, val localIp: String)(implicit val watchedDirectory: File) {
+class ActorsContainer(val system: ActorSystem, val localIp: String)
+                     (implicit val watchedDirectory: File) {
 
   /**
     * A container to create and build the `ActorSystem` and `Actor`s.
     *
     * @param localIp          the local (internal) IP to be used behind a NAT, Load Balancers or Docker containers.
     *                         If the IP is invalid, an exception will be thrown.
-    * @param actorSystemName  the name to give to the `ActorSystem`, defaults to `ActorsContainerBuilder.DEFAULT_ACTOR_SYSTEM_NAME`.
+    * @param randomNum        a random integer that will be added to the `actorSystemName` in order to create a unique name
+    * @param actorSystemName  the name to give to the [[ActorSystem]], defaults to [[ActorsContainerBuilder.DEFAULT_ACTOR_SYSTEM_NAME]].
     *                         The actual name given to the system will be like <actorSystemName>_<random int>
     * @param watchedDirectory the directory to watch files in. If watchedDirectory does not exist or is not a directory,
     *                         an exception will be thrown!
-    * @param config           the `Config` to use for the `ActorSystem`.
+    * @param config           the `Config` to use for the [[ActorSystem]].
     */
-  def this(localIp: String, actorSystemName: String)(implicit config: Config, watchedDirectory: File) {
+  def this(localIp: String, actorSystemName: String, randomNum: Int = Random.nextInt())
+          (implicit config: Config, watchedDirectory: File) {
     this ({
-      val systemNameWithRandNum = s"${actorSystemName}_${Random.nextInt()}"
+      val systemNameWithRandNum = s"${actorSystemName}_${randomNum.abs}"
       val system = ActorSystem(systemNameWithRandNum , config)
 
       val port: Option[Int] = AddressExtension(system).address.port
@@ -49,30 +53,33 @@ class ActorsContainer(val system: ActorSystem, val localIp: String)(implicit val
 
   }
 
+  // this line will throw an exception if system.name is not of the proper format
+  val systemNum: Int = system.name.split("_")(1).toInt
+
   val externalIp: String = AddressExtension(system).address.host.get
   val systemPort: Int = AddressExtension(system).address.port.get
-  private val actorSystemName = system.name
 
   if (!NetworkUtils.isValidIp(localIp)) throw new MalformedURLException(s"local IP $localIp is not valid!")
   if (!NetworkUtils.isValidIp(externalIp)) throw new MalformedURLException(s"external IP $externalIp is not valid!")
   if (!watchedDirectory.exists) throw new FileNotFoundException(s"$watchedDirectory does not exist!")
   if (!watchedDirectory.isDirectory) throw new Exception(s"$watchedDirectory is not a directory!")
 
+  // create a DeadLettersActor to subscribe to DeadLetters
+  private val deadLettersActor =  system.actorOf(Props[DeadLettersActor], "deadLettersActor")
+
   private val commActor = system.actorOf(Props(new CommActor(externalIp, diffActor, fileHandler)), ActorsContainer.COMM_ACTOR_NAME)
   private lazy val fileHandler: ActorRef = system.actorOf(Props(new FileHandlerActor(diffActor, commActor, watchedDirectory)))
   private lazy val diffActor: ActorRef = system.actorOf(Props(new DiffActor(commActor, fileHandler)))
 
-  def addRemoteConnection(ip: String, port: Int): Unit = {
-    commActor ! AddRemoteConnectionMsg(ip, port, ActorsContainer.COMM_ACTOR_NAME, Some(actorSystemName))
+  def addRemoteConnection(ip: String, port: Int, systemNumber: Int): Unit = {
+    commActor ! AddRemoteConnectionMsg(ip, port, ActorsContainer.COMM_ACTOR_NAME,
+      Some(s"${ActorsContainerBuilder.DEFAULT_ACTOR_SYSTEM_NAME}_$systemNumber"))
   }
-
 }
 
 
 object ActorsContainer {
-  private val rand = Random.nextInt()
-
-  val COMM_ACTOR_NAME = s"commActor_$rand"
-  val FILE_HANDLER_NAME = s"fileHandler_$rand"
-  val DIFF_ACTOR_NAME = s"diffActor_$rand"
+  val COMM_ACTOR_NAME = s"commActor"
+  val FILE_HANDLER_NAME = s"fileHandler"
+  val DIFF_ACTOR_NAME = s"diffActor"
 }
