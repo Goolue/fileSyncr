@@ -9,14 +9,24 @@ import utils.NetworkUtils
 object Main extends App {
 
   override def main(args: Array[String]): Unit = {
-    val upnpService = NetworkUtils.getUPnPService
+//    val upnpService = NetworkUtils.getUPnPService
 
 //    upnpService.getControlPoint.search(new STAllHeader)
+
 
     val file = {
       if (args.length == 0) File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles"
       else File.apply(args(0))
     }
+
+//    val user = System.getProperty("user.name")
+//    val nf = file.createChild("someFile.txt")
+//    val perm = nf.permissions
+//    val own = nf.owner
+//    val ownName = nf.ownerName
+//    val prov = file.fileSystem.provider()
+//    nf.delete()
+
     val container = ActorsContainerBuilder.getInstanceWithIPs
       .withDirectory(file)
       //      .withDirectory(File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles")

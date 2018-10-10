@@ -1,5 +1,7 @@
 package actors
 
+import java.nio.file.attribute.PosixFilePermission
+
 import actors.FileHandlerActor._
 import actors.Messages.EventDataMessage.{ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.FileEventMessage._
@@ -47,6 +49,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
       }
       else {
         fileToCreate.createIfNotExists(createParents = true)
+        fileToCreate.addPermission(PosixFilePermission.OWNER_WRITE) // TODO check
       }
     }
 
