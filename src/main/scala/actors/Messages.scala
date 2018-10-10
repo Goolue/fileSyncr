@@ -10,6 +10,8 @@ import entities.serialization.SerializationPatchWrapper
 object Messages {
 
   type StringPatch = Patch[String]
+  type LinesOption = Option[Traversable[String]]
+
   trait Message
 
   sealed trait FileEventMessage extends Message
@@ -32,6 +34,9 @@ object Messages {
   object GetterMsg {
     case class GetLinesMsg(path: String, patch: StringPatch) extends GetterMsg
     case class OldLinesMsg(lines: Traversable[String], path: String, patch: StringPatch) extends GetterMsg
+
+    case class GetStateMsg() extends GetterMsg
+    case class StateMsg(states: Map[Path, LinesOption]) extends GetterMsg
   }
   //TODO: more msgs
 }

@@ -25,7 +25,9 @@ object FileWatcherConfigurer {
     watcher ! when(events = EventType.ENTRY_CREATE, EventType.ENTRY_MODIFY, EventType.ENTRY_DELETE) {
       case (EventType.ENTRY_CREATE, file) =>
         actorSystem.log.info(s"$file got created")
-        fileHandler ! FileCreatedMsg(FileUtils.getFileAsRelativeStr(file, fileToWatch))
+        if (!file.isDirectory) {
+          fileHandler ! FileCreatedMsg(FileUtils.getFileAsRelativeStr(file, fileToWatch))
+        } else {actorSystem.log.info(s"$file is a directory")}
       case (EventType.ENTRY_MODIFY, file) =>
         actorSystem.log.info(s"$file got modified")
         fileHandler ! FileModifiedMsg(FileUtils.getFileAsRelativeStr(file, fileToWatch))

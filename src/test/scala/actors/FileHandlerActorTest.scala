@@ -1,11 +1,12 @@
 package actors
 
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
-import actors.FileHandlerActor.{MapContainsKeyMsg, MapContainsValueMsg}
+import actors.FileHandlerActor.{LinesOption, MapContainsKeyMsg, MapContainsValueMsg}
 import actors.Messages.EventDataMessage.{ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
-import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
+import actors.Messages.GetterMsg.{GetLinesMsg, GetStateMsg, OldLinesMsg, StateMsg}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
@@ -18,27 +19,31 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 
 class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
-  with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter{
+  with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter {
 
   val TEXT_IN_FILE = "some text here"
 
   private val tempFileDir: File = File.currentWorkingDirectory / "src" / "test" / "resources" / "tempFiles"
-  val file: File = File.newTemporaryFile("someFile", ".txt", Some(tempFileDir))
-  file.createIfNotExists()
+  var file: File = _
 
   var fileHandler: ActorRef = _
 
   before {
+    file = File.newTemporaryFile("someFile", ".txt", Some(tempFileDir))
+    file.createIfNotExists()
+    file.overwrite(TEXT_IN_FILE)
     this.fileHandler = system.actorOf(Props(new FileHandlerActor(testActor, testActor, tempFileDir,
       createWatchConfigurer = false)))
   }
 
   after {
+    if (file.exists) {
+      file.delete()
+    }
     fileHandler = null
   }
 
   override def afterAll {
-    tempFileDir.clear()
     TestKit.shutdownActorSystem(system)
   }
 
@@ -51,7 +56,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
     }
 
     "create the appropriate file when receiving a FileCreatedMsg with isRemote = true" in {
-      val fileToSend = tempFileDir /  "someFile.txt"
+      val fileToSend = tempFileDir / "someFile.txt"
       fileToSend.deleteOnExit()
 
       val msg = FileCreatedMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir), isRemote = true)
@@ -59,7 +64,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
       Thread sleep 1000
 
-      (tempFileDir / "someFile.txt").exists should be (true)
+      (tempFileDir / "someFile.txt").exists should be(true)
     }
 
     "NOT add the path of the file to it's map when receiving a FileCreatedMsg" in {
@@ -144,100 +149,96 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
     }
 
     "delete the appropriate file when receiving a FileDeletedMsg with isRemote = true" in {
-      // TODO check this one
 
-      val fileToSend = File.newTemporaryFile("someFile", ".txt", Some(tempFileDir))
-      fileToSend.deleteOnExit()
+      File.usingTemporaryFile("someFile", ".txt", Some(tempFileDir)) { fileToSend =>
+        //send a file mod msg so the path will be in the map
+        val modMsg = FileModifiedMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir))
+        fileHandler ! modMsg
+        //clear the message from the queue
+        expectMsgType[ModificationDataMsg]
 
-      //send a file mod msg so the path will be in the map
-      val modMsg = FileModifiedMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir))
-      fileHandler ! modMsg
-      //clear the message from the queue
-      expectMsgType[ModificationDataMsg]
+        val msg = FileDeletedMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir), isRemote = true)
+        fileHandler ! msg
 
-      val msg = FileDeletedMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir), isRemote = true)
-      fileHandler ! msg
+        Thread sleep 1000
 
-      Thread sleep 1000
-
-      // not using fileToSend because fileToSend.exists == true
-      (File.currentWorkingDirectory / fileToSend.name).exists should be (false)
+        // not using fileToSend because fileToSend.exists == true
+        (File.currentWorkingDirectory / fileToSend.name).exists should be(false)
+      }
     }
 
     "send an OldLinesMsg(lines, path, patch) when receiving a GetLinesMsg(path, patch)" in {
-      val fileToSend = File.newTemporaryFile("someFile", ".txt", Some(tempFileDir))
-      fileToSend.deleteOnExit()
-      val filePathStr = FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir)
+      File.usingTemporaryFile("someFile", ".txt", Some(tempFileDir)) { fileToSend =>
+        val filePathStr = FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir)
 
-      //send a file mod msg so the path will be in the map
-      val modMsg = FileModifiedMsg(filePathStr)
-      fileHandler ! modMsg
-      //clear the message from the queue
-      expectMsgType[ModificationDataMsg]
+        //send a file mod msg so the path will be in the map
+        val modMsg = FileModifiedMsg(filePathStr)
+        fileHandler ! modMsg
+        //clear the message from the queue
+        expectMsgType[ModificationDataMsg]
 
-      val patch: Patch[String] = DiffUtils.diff(List.empty[String].asJava, List("bla").asJava)
-      val getLinesMsg = GetLinesMsg(filePathStr, patch)
-      fileHandler ! getLinesMsg
+        val patch: Patch[String] = DiffUtils.diff(List.empty[String].asJava, List("bla").asJava)
+        val getLinesMsg = GetLinesMsg(filePathStr, patch)
+        fileHandler ! getLinesMsg
 
-      expectMsg(OldLinesMsg(List.empty, filePathStr, patch))
+        expectMsg(OldLinesMsg(List.empty, filePathStr, patch))
+      }
     }
 
     "update it's map when receiving an UpdateFileMsg for the first time" in {
-      val fileToSend = File.newTemporaryFile("someFile", ".txt", Some(tempFileDir))
-      fileToSend.deleteOnExit()
+      File.usingTemporaryFile("someFile", ".txt", Some(tempFileDir)) { fileToSend =>
+        //check that the map does not contain the path
+        fileHandler ! MapContainsKeyMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir))
+        expectMsg(false)
 
-      //check that the map does not contain the path
-      fileHandler ! MapContainsKeyMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir))
-      expectMsg(false)
+        //send the msg
+        val lines = List("some new lines")
+        val updateMsg = UpdateFileMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir), lines)
+        fileHandler ! updateMsg
 
-      //send the msg
-      val lines = List("some new lines")
-      val updateMsg = UpdateFileMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir), lines)
-      fileHandler ! updateMsg
+        expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
 
-      expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
-
-      //check if the map was updated
-      fileHandler ! MapContainsKeyMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir))
-      expectMsg(true)
-      fileHandler ! MapContainsValueMsg(Some(lines))
-      expectMsg(true)
+        //check if the map was updated
+        fileHandler ! MapContainsKeyMsg(FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir))
+        expectMsg(true)
+        fileHandler ! MapContainsValueMsg(Some(lines))
+        expectMsg(true)
+      }
     }
 
     "update it's map when receiving an UpdateFileMsg NOT for the first time" in {
-      val fileToSend = File.newTemporaryFile("someFile", ".txt", Some(tempFileDir))
-      fileToSend.deleteOnExit()
+      File.usingTemporaryFile("someFile", ".txt", Some(tempFileDir)) { fileToSend =>
+        //check that the map does not contain the path
+        val path = FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir)
+        fileHandler ! MapContainsKeyMsg(path)
+        expectMsg(false)
 
-      //check that the map does not contain the path
-      val path = FileUtils.getFileAsRelativeStr(fileToSend, tempFileDir)
-      fileHandler ! MapContainsKeyMsg(path)
-      expectMsg(false)
+        //send first msg
+        val lines = List("some new lines")
+        val firstUpdateMsg = UpdateFileMsg(path, lines)
+        fileHandler ! firstUpdateMsg
 
-      //send first msg
-      val lines = List("some new lines")
-      val firstUpdateMsg = UpdateFileMsg(path, lines)
-      fileHandler ! firstUpdateMsg
+        expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
 
-      expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
+        //check if the map was updated
+        fileHandler ! MapContainsKeyMsg(path)
+        expectMsg(true)
+        fileHandler ! MapContainsValueMsg(Some(lines))
+        expectMsg(true)
 
-      //check if the map was updated
-      fileHandler ! MapContainsKeyMsg(path)
-      expectMsg(true)
-      fileHandler ! MapContainsValueMsg(Some(lines))
-      expectMsg(true)
+        //send the 2nd msg
+        val newLines = List("some new lines")
+        val updateMsg = UpdateFileMsg(path, newLines)
+        fileHandler ! updateMsg
 
-      //send the 2nd msg
-      val newLines = List("some new lines")
-      val updateMsg = UpdateFileMsg(path, newLines)
-      fileHandler ! updateMsg
+        expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
 
-      expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
-
-      //check if the map was updated
-      fileHandler ! MapContainsKeyMsg(path)
-      expectMsg(true)
-      fileHandler ! MapContainsValueMsg(Some(newLines))
-      expectMsg(true)
+        //check if the map was updated
+        fileHandler ! MapContainsKeyMsg(path)
+        expectMsg(true)
+        fileHandler ! MapContainsValueMsg(Some(newLines))
+        expectMsg(true)
+      }
     }
 
     "NOT do anything when receiving an UpdateFileMsg for a dir" in {
@@ -248,18 +249,95 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
     }
 
     "create the file(path) with lines when receiving an UpdateFileMsg(path, lines) for the first time" in {
-      val newFile = File.newTemporaryFile("someFile", ".txt", Some(tempFileDir))
-      newFile.deleteOnExit()
+      File.usingTemporaryFile("someFile", ".txt", Some(tempFileDir)) { newFile =>
+        val newLines = List("lines for the new file", "and another one")
+        fileHandler ! UpdateFileMsg(FileUtils.getFileAsRelativeStr(newFile, tempFileDir), newLines)
 
-      val newLines = List("lines for the new file", "and another one")
-      fileHandler ! UpdateFileMsg(FileUtils.getFileAsRelativeStr(newFile, tempFileDir), newLines)
+        expectNoMessage(Duration.apply(3, TimeUnit.SECONDS))
 
-      expectNoMessage(Duration.apply(3, TimeUnit.SECONDS))
+        assert(newFile.exists)
+        assert(newFile.lines == newLines)
 
-      assert(newFile.exists)
-      assert(newFile.lines == newLines)
+        newFile.deleteOnExit()
+      }
+    }
 
-      newFile.deleteOnExit()
+    "return an empty StateMsg when receiving a GetStateMsg and dir is empty" in {
+      tempFileDir.clear()
+      fileHandler ! GetStateMsg
+
+      expectMsg(StateMsg(Map.empty))
+    }
+
+    "return a StateMsg with correct entry (1 file, correct lines, not dir) when receiving a GetStateMsg" in {
+      fileHandler ! GetStateMsg
+
+      val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> Some(file.lines)))
+      expectMsg(stateMsg)
+    }
+
+    "return a StateMsg with correct entry (2 files, correct lines, not dir) when receiving a GetStateMsg" in {
+      File.usingTemporaryFile("SomeOtherFile", ".txt", Some(tempFileDir)) { otherFile =>
+        fileHandler ! GetStateMsg
+
+        val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> Some(file.lines),
+          tempFileDir.relativize(otherFile) -> Some(otherFile.lines)))
+        expectMsg(stateMsg)
+      }
+    }
+
+    "return a StateMsg with correct entry (2 files, correct lines, 1 empty dir) when receiving a GetStateMsg" in {
+      for {
+        otherFile: File <- File.temporaryFile("SomeOtherFile", ".txt", Some(tempFileDir))
+        tempDir: File <- File.temporaryDirectory("tempDir", Some(tempFileDir))
+      } {
+        fileHandler ! GetStateMsg
+
+        val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> Some(file.lines),
+          tempFileDir.relativize(otherFile) -> Some(otherFile.lines)))
+        expectMsg(stateMsg)
+      }
+    }
+
+    "return a StateMsg with correct entry (2 files, correct lines, 1 dir with 1 file in it) when receiving a GetStateMsg" in {
+      for {
+        otherFile: File <- File.temporaryFile("SomeOtherFile", ".txt", Some(tempFileDir))
+        tempDir: File <- File.temporaryDirectory("tempDir", Some(tempFileDir))
+        otherFileInTempDir: File <- File.temporaryFile("otherFileInTempDir", ".txt", Some(tempDir))
+      } {
+        fileHandler ! GetStateMsg
+
+        val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> Some(file.lines),
+          tempFileDir.relativize(otherFile) -> Some(otherFile.lines),
+          tempFileDir.relativize(otherFileInTempDir) -> Some(Traversable.empty[String])))
+        expectMsg(stateMsg)
+      }
+    }
+
+    "return a StateMsg with correct entry (2 files, correct lines, 2 dirs with 1 dir with 1 file in it) when receiving a GetStateMsg" in {
+      for {
+        otherFile: File <- File.temporaryFile("SomeOtherFile", ".txt", Some(tempFileDir))
+        tempDir1: File <- File.temporaryDirectory("tempDir1", Some(tempFileDir))
+        tempDir2: File <- File.temporaryDirectory("tempDir2", Some(tempFileDir))
+        otherFileInTempDir1: File <- File.temporaryFile("otherFileInTempDir1", ".txt", Some(tempDir1))
+        otherFileInTempDir2: File <- File.temporaryFile("otherFileInTempDir2", ".txt", Some(tempDir2))
+      } {
+        val txtInOtherFIleInDir1 = "Yep, some text!!"
+        otherFileInTempDir1.overwrite(txtInOtherFIleInDir1)
+
+        fileHandler ! GetStateMsg
+
+        val mapExpected: Map[Path, LinesOption] = Map(tempFileDir.relativize(file) -> Some(file.lines),
+          tempFileDir.relativize(otherFile) -> Some(otherFile.lines),
+          tempFileDir.relativize(otherFileInTempDir1) -> Some(Traversable.empty[String]),
+          tempFileDir.relativize(otherFileInTempDir2) -> Some(Traversable(txtInOtherFIleInDir1)))
+        expectMsgPF(Duration.apply(3, TimeUnit.SECONDS)) {
+          case StateMsg(mapInMsg) =>
+            mapInMsg.forall(entry => mapExpected.contains(entry._1) && entry._2 == mapExpected(entry._1)) &&
+              mapExpected.size == mapInMsg.size
+          case _ => false
+        }
+      }
     }
 
   }

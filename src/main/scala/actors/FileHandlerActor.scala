@@ -5,7 +5,7 @@ import java.nio.file.attribute.PosixFilePermission
 import actors.FileHandlerActor._
 import actors.Messages.EventDataMessage.{ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.FileEventMessage._
-import actors.Messages.GetterMsg.{GetLinesMsg, OldLinesMsg}
+import actors.Messages.GetterMsg.{GetLinesMsg, GetStateMsg, OldLinesMsg, StateMsg}
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import better.files.File
@@ -159,6 +159,19 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
         //update the map
         context become handleMessages(pathToLines.updated(path, Some(lines)), filesMonitorMap)
       }
+
+    case GetStateMsg =>
+      val mappingValue: File => Option[Traversable[String]] = (f: File) => {
+        if (!f.isDirectory) Some(f.lines)
+        else None
+      }
+      val map = dir.walk()
+        .withFilter(!_.isDirectory)
+        .map(file => (dir.relativize(file), mappingValue(file)))
+        .toMap
+
+
+      sender() ! StateMsg(map)
 
     // default case
     case msg =>
