@@ -1,7 +1,6 @@
 package actors
 
-import java.time.Duration
-import java.util.concurrent.{CompletionStage, TimeUnit}
+import java.util.concurrent.TimeUnit
 
 import actors.CommActor._
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg}
@@ -11,11 +10,12 @@ import akka.actor.{ActorRef, ActorSelection}
 import akka.event.LoggingReceive
 import akka.routing.{BroadcastRoutingLogic, Routee, Router}
 
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 
 class CommActor(private val url: String, private val diffActor: ActorRef,
                 private val fileHandlerActor: ActorRef) extends BasicActor {
-  log.info(s"${self.path.toStringWithoutAddress} created with url $url")
+
+  log.debug(s"${self.path.toStringWithoutAddress} created with url $url")
 
   def receive: Receive = handleMassages(Map.empty, Router(BroadcastRoutingLogic(), Vector.empty[Routee]))
 
@@ -26,17 +26,17 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
   def handleMassages(connections: Map[String, ActorSelection], router: Router): Receive = LoggingReceive {
     case HasConnectionQuery(msgUrl) =>
       val res = connections.contains(msgUrl)
-      log.info(s"$getClassName got an HasConnectionQuery for msgUrl $msgUrl, returning $res")
+      log.debug(s"$getClassName got an HasConnectionQuery for msgUrl $msgUrl, returning $res")
       sender() ! res
 
     case AddRemoteConnectionMsg(msgUrl, port, actorPathStr, systemName) =>
-      log.info(s"$getClassName got an AddRemoteConnectionMsg for msgUrl $msgUrl, port $port, actor $actorPathStr, " +
+      log.debug(s"$getClassName got an AddRemoteConnectionMsg for msgUrl $msgUrl, port $port, actor $actorPathStr, " +
         s"system $systemName")
       if (port <= 0) log.warning(s"port $port <= 0 !")
       else {
         msgUrl match {
-          case null => log.info(s"$getClassName got a null msgUrl")
-          case "" => log.info(s"$getClassName got an empty msgUrl")
+          case null => log.warning(s"$getClassName got a null msgUrl")
+          case "" => log.warning(s"$getClassName got an empty msgUrl")
           case _ =>
             if (!connections.contains(msgUrl) && isValidUrl(msgUrl)) {
               val generatedActorPath = createRemotePath(msgUrl, systemName, port, actorPathStr)
@@ -55,47 +55,47 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
                   }
                 })(context.dispatcher)
             }
-            else log.info(s"$getClassName got an invalid msgUrl $msgUrl")
+            else log.warning(s"$getClassName got an invalid msgUrl $msgUrl")
         }
       }
 
     case RemoveRemoteConnectionMsg(urlToRemove, msg) =>
-      log.info(s"$getClassName got an RemoveRemoteConnectionMsg for url $urlToRemove with msg $msg")
+      log.debug(s"$getClassName got an RemoveRemoteConnectionMsg for url $urlToRemove with msg $msg")
       if (urlToRemove != null && connections.contains(urlToRemove)) {
         val newRouter = router.removeRoutee(connections.getOrElse[ActorSelection](urlToRemove, context.actorSelection(""))) //TODO maybe else part is not good
         context become handleMassages(connections - urlToRemove, newRouter)
       }
 
     case DisconnectMsg(msg) =>
-      log.info(s"$getClassName got an DisconnectMsg with msg: $msg")
+      log.debug(s"$getClassName got an DisconnectMsg with msg: $msg")
       router.route(RemoveRemoteConnectionMsg(url, msg), context.self)
 
     case FileDeletedMsg(path, isRemote) =>
       if (isRemote) {
-        log.info(s"$getClassName got an FileDeletedMsg for path $path with isRemote = true, s" +
+        log.debug(s"$getClassName got an FileDeletedMsg for path $path with isRemote = true, s" +
           s"ending FileDeletedMsg to fileHandler")
         fileHandlerActor ! FileDeletedMsg(path, isRemote = true)
       } else {
-        log.info(s"$getClassName got an FileDeletedMsg for path $path, routing to ${router.routees.size} routees")
+        log.debug(s"$getClassName got an FileDeletedMsg for path $path, routing to ${router.routees.size} routees")
         router.route(FileDeletedMsg(path, isRemote = true), context.self)
       }
 
     case FileCreatedMsg(path, isRemote) =>
       if (isRemote) {
-        log.info(s"$getClassName got an FileCreatedMsg for path $path with isRemote = true, " +
+        log.debug(s"$getClassName got an FileCreatedMsg for path $path with isRemote = true, " +
           s"sending FileCreatedMsg to fileHandler $fileHandlerActor")
         fileHandlerActor ! FileCreatedMsg(path, isRemote = true)
       } else {
-        log.info(s"$getClassName got an FileCreatedMsg for path $path, routing to ${router.routees.size} routees")
+        log.debug(s"$getClassName got an FileCreatedMsg for path $path, routing to ${router.routees.size} routees")
         router.route(FileCreatedMsg(path, isRemote = true), context.self)
       }
 
     case DiffEventMsg(path, patch, isRemote) =>
-      log.info(s"$getClassName got an DiffEventMsg for path $path, isRemote? $isRemote")
+      log.debug(s"$getClassName got an DiffEventMsg for path $path, isRemote? $isRemote")
       if (isRemote) {
         diffActor ! ApplyPatchMsg(path, patch.toPatch)
       } else {
-        log.info(s"$getClassName routing DiffEventMsg for path $path to ${router.routees.size} routees")
+        log.debug(s"$getClassName routing DiffEventMsg for path $path to ${router.routees.size} routees")
         router.route(DiffEventMsg(path, patch, isRemote = true), context.self)
       }
 

@@ -22,7 +22,7 @@ import better.files.File.RandomAccessMode
 class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File = File.currentWorkingDirectory,
                        createWatchConfigurer: Boolean = true) extends BasicActor {
 
-  log.info(s"handling dir $dir")
+  log.info(s"$getClassName handling dir $dir")
 
   if (!dir.isDirectory) {
     throw new Exception(s"dir $dir is NOT a directory!")
@@ -67,8 +67,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
 
     val isRemote = fileCreateMsg.isRemote
     val path = fileCreateMsg.path
-    log.info(s"actors.FileHandlerActor got a FileCreatedMsd for path $path, " +
-    s"isRemote? $isRemote")
+    log.debug(s"$getClassName got a FileCreatedMsd for path $path, isRemote? $isRemote")
 
     if (isRemote) {
       handleRemote(path)
@@ -80,8 +79,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
 
   private def handleFileDeleteMsg(fileDeletedMsg: FileDeletedMsg) = {
     val isRemote = fileDeletedMsg.isRemote
-    log.info(s"actors.FileHandlerActor got a FileDeletedMsg for path ${fileDeletedMsg.path}" +
-      s" isRemote? $isRemote")
+    log.debug(s"$getClassName got a FileDeletedMsg for path ${fileDeletedMsg.path} isRemote? $isRemote")
     if (isRemote) {
       val fileToDelete = dir / fileDeletedMsg.path
       if (!fileToDelete.exists) {
@@ -98,7 +96,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
 
   private def handleFileModMsg(pathToLines: Map[String, LinesOption], path: String, isRemote: Boolean,
                                filesMonitorMap: Set[String]): Unit = {
-    log.info(s"actors.FileHandlerActor got a FileModifiedMsg for path $path, isRemote? $isRemote")
+    log.debug(s"$getClassName got a FileModifiedMsg for path $path, isRemote? $isRemote")
     if (isRemote) {
       log.warning(s"got a FileModifiedMsg with isRemote = true for path $path")
     } else {
@@ -136,7 +134,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
       context become handleMessages(pathToLines - fileDeletedMsg.path, filesMonitorMap)
 
     case GetLinesMsg(path, patch) =>
-      log.info(s"actors.FileHandlerActor got a GetLinesMsg for path $path")
+      log.debug(s"$getClassName got a GetLinesMsg for path $path")
       if (!patch.getDeltas.isEmpty) {
         val lines = pathToLines.getOrElse(path, None)
         diffActor ! OldLinesMsg(lines.getOrElse(None), path, patch)
@@ -146,10 +144,10 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
       }
 
     case UpdateFileMsg(path, lines) =>
-      log.info(s"actors.FileHandlerActor got a UpdateFileMsg for path $path")
+      log.debug(s"$getClassName got a UpdateFileMsg for path $path")
       //update the file
       val file = dir / path
-      if (file.isDirectory) log.info(s"FileHandlerActor got an UpdateFileMsg for dir in path $path")
+      if (file.isDirectory) log.debug(s"$getClassName got an UpdateFileMsg for dir in path $path")
       else {
         file.createIfNotExists()
         file.usingLock(RandomAccessMode.readWrite)(fileChan => {
