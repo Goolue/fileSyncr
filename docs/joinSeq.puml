@@ -1,0 +1,39 @@
+@startuml
+
+	actor user1
+	participant system1
+	participant system2
+	actor user2
+
+	user1 -> system1 : starts
+	user1 -> system1 : choose directory
+
+	user2 -> system2 : starts
+	user2 -> system2 : choose directory
+
+	user2 -> system2 : requests to join user1
+	user2 -> system2 : enter ip, system number, etc
+	system2 -> system2 : addRemote
+	system2 -> system1 : GetStateMsg
+	system2 <- system1 : StateMsg(all file names and lines)
+	user2 <- system2 : reset or sync?
+	
+	alt reset 
+		user2 -> system2 : choose 'reset'
+		system2 -> system2 : delete all current files
+		system2 -> system2 : create files
+		system2 -> system2 : update lines in files
+
+
+	else sync
+		user2 -> system2 : choose 'sync'
+		system2 -> system2 : create missing files
+		system2 -> system2 : update lines in files
+	end
+	
+	system2 -> system1 : JoinedMsg
+	system2 <- system1 : AllSystemsNetworkMsg(all systems names, ips, ports)
+	system1 -> system1 : addRemote
+	system2 -> system2 : adds rest of network with addRemote
+
+@enduml

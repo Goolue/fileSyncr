@@ -47,8 +47,8 @@
 			"maybe something in between actors.FileHandlerActor and CommActor_local"
 		endnote
 		actors.FileHandlerActor -> CommActor_local : FileDeletedMsg(path)
-		CommActor_local -> CommActor_remote : FileDeletedMsg(path)
-		CommActor_remote -> FileHandlerActor_remote : DeleteFile(path)
+		CommActor_local -> CommActor_remote : FileDeletedMsg(path, true)
+		CommActor_remote -> FileHandlerActor_remote : FileDeletedMsg(path, true)
 		FileHandlerActor_remote -> fileSystem_remote : deletes file
 
 	end
