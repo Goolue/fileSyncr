@@ -176,7 +176,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
         val linesOpt = entry._2
         val currFile = dir / path.toString
 
-        if (currFile.isRegularFile || linesOpt.isDefined) {
+        if (!currFile.isDirectory) {
           if (!currFile.exists) {
             log.debug(s"creating $currFile")
             currFile.createIfNotExists(createParents = true)

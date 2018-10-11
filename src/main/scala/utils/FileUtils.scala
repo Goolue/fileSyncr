@@ -3,6 +3,7 @@ package utils
 import java.nio.file.Path
 
 import actors.FileHandlerActor.LinesOption
+import actors.Messages.FileLines
 import better.files.File
 
 object FileUtils {
@@ -37,16 +38,16 @@ object FileUtils {
     * }}}
     *
     * @param dir The directory who's files should be in the map.
-    * @return A [[Map]]@tparam[ [[Path]],[[LinesOption]] ] in which each entry is in the form:
+    * @return A [[Map]]@tparam[ [[Path]],[[FileLines]] ] in which each entry is in the form:
     *         ([[Path]] of a file in dir, relative to dir -> [[Traversable]](lines in that file)
     */
-  def dirToMap(dir: File): Map[Path, LinesOption] = {
+  def dirToMap(dir: File): Map[Path, FileLines] = {
     if (!dir.exists) throw new Exception(s"file $dir does not exist!")
     if (!dir.isDirectory) throw new Exception(s"file $dir is not a directory!")
 
     val map = dir.walk()
       .withFilter(!_.isDirectory) // ignore directories
-      .map(file => (dir.relativize(file), Some(file.lines)))
+      .map(file => (dir.relativize(file), file.lines))
       .toMap
 
     map

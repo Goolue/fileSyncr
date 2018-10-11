@@ -272,7 +272,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
     "return a StateMsg with correct entry (1 file, correct lines, not dir) when receiving a GetStateMsg" in {
       fileHandler ! GetStateMsg
 
-      val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> Some(file.lines)))
+      val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> file.lines))
       expectMsg(stateMsg)
     }
 
@@ -280,8 +280,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       File.usingTemporaryFile("SomeOtherFile", ".txt", Some(tempFileDir)) { otherFile =>
         fileHandler ! GetStateMsg
 
-        val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> Some(file.lines),
-          tempFileDir.relativize(otherFile) -> Some(otherFile.lines)))
+        val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> file.lines, tempFileDir.relativize(otherFile) -> otherFile.lines))
         expectMsg(stateMsg)
       }
     }
@@ -293,8 +292,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       } {
         fileHandler ! GetStateMsg
 
-        val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> Some(file.lines),
-          tempFileDir.relativize(otherFile) -> Some(otherFile.lines)))
+        val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> file.lines, tempFileDir.relativize(otherFile) -> otherFile.lines))
         expectMsg(stateMsg)
       }
     }
@@ -307,9 +305,9 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       } {
         fileHandler ! GetStateMsg
 
-        val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> Some(file.lines),
-          tempFileDir.relativize(otherFile) -> Some(otherFile.lines),
-          tempFileDir.relativize(otherFileInTempDir) -> Some(Traversable.empty[String])))
+        val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> file.lines,
+          tempFileDir.relativize(otherFile) -> otherFile.lines,
+          tempFileDir.relativize(otherFileInTempDir) -> Traversable.empty[String]))
         expectMsg(stateMsg)
       }
     }
@@ -366,7 +364,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       file.lines should be (List(TEXT_IN_FILE))
 
       val newTxt = "different text!"
-      fileHandler ! ApplyStateMsg(Map(tempFileDir.relativize(file) -> Some(Seq(newTxt))))
+      fileHandler ! ApplyStateMsg(Map(tempFileDir.relativize(file) -> Seq(newTxt)))
 
       Thread sleep 1000
 
@@ -377,7 +375,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       file.lines should be (List(TEXT_IN_FILE))
 
       val newTxt = "different text!"
-      fileHandler ! ApplyStateMsg(Map(tempFileDir.relativize(file) -> Some(Seq(newTxt))), clearFiles = true)
+      fileHandler ! ApplyStateMsg(Map(tempFileDir.relativize(file) -> Seq(newTxt)), clearFiles = true)
 
       Thread sleep 1000
 
@@ -388,7 +386,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       val missingFile = tempFileDir / "missingFile.txt"
       missingFile.deleteOnExit()
       val missingPath = tempFileDir.relativize(missingFile)
-      fileHandler ! ApplyStateMsg(Map(missingPath -> Some(Traversable.empty)), clearFiles = true)
+      fileHandler ! ApplyStateMsg(Map(missingPath -> Traversable.empty), clearFiles = true)
 
       Thread sleep 1000
 
@@ -427,7 +425,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       missingFile.deleteOnExit()
 
       val missingPath = tempFileDir.relativize(missingFile)
-      fileHandler ! ApplyStateMsg(Map(missingPath -> Some(Traversable.empty)))
+      fileHandler ! ApplyStateMsg(Map(missingPath -> Traversable.empty))
 
       Thread sleep 1000
 
@@ -441,7 +439,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
       missingFile.deleteOnExit()
 
       val missingPath = tempFileDir.relativize(missingFile)
-      fileHandler ! ApplyStateMsg(Map(missingPath -> Some(Traversable.empty)), clearFiles = true)
+      fileHandler ! ApplyStateMsg(Map(missingPath -> Traversable.empty), clearFiles = true)
 
       Thread sleep 1000
 
