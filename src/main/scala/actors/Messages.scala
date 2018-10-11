@@ -37,6 +37,7 @@ object Messages {
 
     case class GetStateMsg() extends GetterMsg
     case class StateMsg(states: Map[Path, LinesOption]) extends GetterMsg
+    case class ApplyStateMsg(states: Map[Path, LinesOption], clearFiles: Boolean = false) extends GetterMsg
   }
   //TODO: more msgs
 }

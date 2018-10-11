@@ -5,11 +5,12 @@ import java.nio.file.attribute.PosixFilePermission
 import actors.FileHandlerActor._
 import actors.Messages.EventDataMessage.{ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.FileEventMessage._
-import actors.Messages.GetterMsg.{GetLinesMsg, GetStateMsg, OldLinesMsg, StateMsg}
+import actors.Messages.GetterMsg._
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import better.files.File
 import better.files.File.RandomAccessMode
+import utils.FileUtils
 
 /**
   * The Actor responsible for actual file manipulation (creation, deletion and modification).
@@ -161,17 +162,30 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
       }
 
     case GetStateMsg =>
-      val mappingValue: File => Option[Traversable[String]] = (f: File) => {
-        if (!f.isDirectory) Some(f.lines)
-        else None
+      sender() ! StateMsg(FileUtils.dirToMap(dir))
+
+    case ApplyStateMsg(map, clearFiles) =>
+      log.debug(s"$getClassName got an ApplyStateMsg with map: $map, clearFiles = $clearFiles")
+      log.info("APPLYING NEW STATE!")
+      if (clearFiles) {
+        log.info(s"$getClassName clearing files!")
+        dir.clear()
       }
-      val map = dir.walk()
-        .withFilter(!_.isDirectory)
-        .map(file => (dir.relativize(file), mappingValue(file)))
-        .toMap
+      map.foreach(entry => {
+        val path = entry._1
+        val linesOpt = entry._2
+        val currFile = dir / path.toString
 
-
-      sender() ! StateMsg(map)
+        if (!currFile.exists) {
+          log.debug(s"creating $currFile. as dir? ${linesOpt.isEmpty}")
+          currFile.createIfNotExists(linesOpt.isEmpty)
+        }
+        if (currFile.isRegularFile) {
+          val txt = linesOpt.toList.flatten.mkString("\n")
+          log.debug(s"overwriting $currFile with text: $txt")
+          currFile.overwrite(txt)
+        }
+      })
 
     // default case
     case msg =>

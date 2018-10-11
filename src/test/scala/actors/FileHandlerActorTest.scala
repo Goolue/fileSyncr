@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import actors.FileHandlerActor.{LinesOption, MapContainsKeyMsg, MapContainsValueMsg}
 import actors.Messages.EventDataMessage.{ModificationDataMsg, UpdateFileMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg, FileModifiedMsg}
-import actors.Messages.GetterMsg.{GetLinesMsg, GetStateMsg, OldLinesMsg, StateMsg}
+import actors.Messages.GetterMsg._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
@@ -338,6 +338,75 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
           case _ => false
         }
       }
+    }
+
+    "clear the directory when receiving an empty ApplyStateMsg with clearFiles = true" in {
+      tempFileDir.isEmpty should be (false)
+
+      fileHandler ! ApplyStateMsg(Map.empty, clearFiles = true)
+
+      Thread.sleep(1000)
+
+      tempFileDir.isEmpty should be (true)
+    }
+
+    "not do anything when receiving an empty ApplyStateMsg with clearFiles = false" in {
+      val childrenPrev = tempFileDir.children
+
+      fileHandler ! ApplyStateMsg(Map.empty)
+
+      Thread.sleep(1000)
+
+      val childrenPost = tempFileDir.children
+
+      childrenPrev sameElements childrenPost should be (true)
+    }
+
+    "update content of file when receiving a non-empty ApplyStateMsg with clearFiles = false" in {
+      file.lines should be (List(TEXT_IN_FILE))
+
+      val newTxt = "different text!"
+      fileHandler ! ApplyStateMsg(Map(tempFileDir.relativize(file) -> Some(Seq(newTxt))))
+
+      Thread sleep 1000
+
+      file.lines should be (List(newTxt))
+    }
+
+    "update content of file when receiving a non-empty ApplyStateMsg with clearFiles = true" in {
+      file.lines should be (List(TEXT_IN_FILE))
+
+      val newTxt = "different text!"
+      fileHandler ! ApplyStateMsg(Map(tempFileDir.relativize(file) -> Some(Seq(newTxt))), clearFiles = true)
+
+      Thread sleep 1000
+
+      file.lines should be (List(newTxt))
+    }
+
+    "create a missing file (non-dir) and delete existing file when receiving an ApplyStateMsg with clearFiles = true" in {
+      val missingFile = tempFileDir / "missingFile.txt"
+      missingFile.deleteOnExit()
+      val missingPath = tempFileDir.relativize(missingFile)
+      fileHandler ! ApplyStateMsg(Map(missingPath -> Some(Traversable.empty)), clearFiles = true)
+
+      Thread sleep 1000
+
+      missingFile.exists should be (true)
+      file.exists should be (false)
+
+    }
+
+    "create a missing file (empty dir) and delete existing file when receiving an ApplyStateMsg with clearFiles = true" in {
+      val missingDir = tempFileDir / "missingDir"
+      missingDir.deleteOnExit()
+      val missingPath = tempFileDir.relativize(missingDir)
+      fileHandler ! ApplyStateMsg(Map(missingPath -> None), clearFiles = true)
+
+      Thread sleep 1000
+
+      missingDir.exists should be (true)
+      file.exists should be (false)
     }
 
   }
