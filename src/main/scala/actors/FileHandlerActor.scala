@@ -176,15 +176,19 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
         val linesOpt = entry._2
         val currFile = dir / path.toString
 
-        if (!currFile.exists) {
-          log.debug(s"creating $currFile. as dir? ${linesOpt.isEmpty}")
-          currFile.createIfNotExists(linesOpt.isEmpty)
-        }
-        if (currFile.isRegularFile) {
+        if (currFile.isRegularFile || linesOpt.isDefined) {
+          if (!currFile.exists) {
+            log.debug(s"creating $currFile")
+            currFile.createIfNotExists(createParents = true)
+          }
           val txt = linesOpt.toList.flatten.mkString("\n")
           log.debug(s"overwriting $currFile with text: $txt")
           currFile.overwrite(txt)
         }
+        else {
+          log.warning(s"file $currFile is a directory!")
+        }
+
       })
 
     // default case

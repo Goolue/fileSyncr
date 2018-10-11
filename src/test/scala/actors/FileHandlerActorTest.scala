@@ -397,7 +397,7 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
     }
 
-    "create a missing file (empty dir) and delete existing file when receiving an ApplyStateMsg with clearFiles = true" in {
+    "NOT create a missing file (empty dir) and delete existing file when receiving an ApplyStateMsg with clearFiles = true" in {
       val missingDir = tempFileDir / "missingDir"
       missingDir.deleteOnExit()
       val missingPath = tempFileDir.relativize(missingDir)
@@ -405,8 +405,48 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
       Thread sleep 1000
 
-      missingDir.exists should be (true)
-      file.exists should be (false)
+      missingDir.exists should not be true
+      file.exists should not be true
+    }
+
+    "NOT create a missing file (empty dir) and not delete existing file when receiving an ApplyStateMsg with clearFiles = false" in {
+      val missingDir = tempFileDir / "missingDir"
+      missingDir.deleteOnExit()
+      val missingPath = tempFileDir.relativize(missingDir)
+      fileHandler ! ApplyStateMsg(Map(missingPath -> None))
+
+      Thread sleep 1000
+
+      missingDir.exists should not be true
+      file.exists should be (true)
+    }
+
+    "create a missing file (empty file inside missing dir) and not delete existing file when receiving an " +
+      "ApplyStateMsg with clearFiles = false" in {
+      val missingFile = tempFileDir / "missingDir" / "missingFile.txt"
+      missingFile.deleteOnExit()
+
+      val missingPath = tempFileDir.relativize(missingFile)
+      fileHandler ! ApplyStateMsg(Map(missingPath -> Some(Traversable.empty)))
+
+      Thread sleep 1000
+
+      missingFile.exists should be (true)
+      file.exists should be (true)
+    }
+
+    "create a missing file (empty file inside missing dir) and not delete existing file when receiving an " +
+      "ApplyStateMsg with clearFiles = true" in {
+      val missingFile = tempFileDir / "missingDir" / "missingFile.txt"
+      missingFile.deleteOnExit()
+
+      val missingPath = tempFileDir.relativize(missingFile)
+      fileHandler ! ApplyStateMsg(Map(missingPath -> Some(Traversable.empty)), clearFiles = true)
+
+      Thread sleep 1000
+
+      missingFile.exists should be (true)
+      file.exists should not be true
     }
 
   }
