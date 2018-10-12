@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import actors.CommActor._
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
+import actors.Messages.GetterMsg.GetStateMsg
 import actors.Messages.Message
 import akka.actor.{ActorRef, ActorSelection}
 import akka.event.LoggingReceive
@@ -104,6 +105,9 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
         router.route(DiffEventMsg(path, patch, isRemote = true), context.self)
       }
 
+    case getStateMsg: GetStateMsg =>
+      log.debug(s"$getClassName got a GetStateMsg, clearFiles is ${getStateMsg.clearFiles}")
+      fileHandlerActor ! getStateMsg
 
     //TODO more msgs
 

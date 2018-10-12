@@ -330,9 +330,9 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
           tempFileDir.relativize(otherFileInTempDir1) -> Some(Traversable.empty[String]),
           tempFileDir.relativize(otherFileInTempDir2) -> Some(Traversable(txtInOtherFIleInDir1)))
         expectMsgPF(Duration.apply(3, TimeUnit.SECONDS)) {
-          case StateMsg(mapInMsg) =>
+          case StateMsg(mapInMsg, clearFiles) =>
             mapInMsg.forall(entry => mapExpected.contains(entry._1) && entry._2 == mapExpected(entry._1)) &&
-              mapExpected.size == mapInMsg.size
+              mapExpected.size == mapInMsg.size && !clearFiles
           case _ => false
         }
       }

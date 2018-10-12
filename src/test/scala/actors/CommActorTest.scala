@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import actors.CommActor.{AddRemoteConnectionMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
+import actors.Messages.GetterMsg.{ApplyStateMsg, GetStateMsg, StateMsg}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import better.files.File
@@ -51,7 +52,6 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
       expectMsg(true)
     }
-
 
     "add url to it's map when receiving a AddRemoteConnectionMsg(url, _, _) with a valid non-numeric url" in {
       val url = "localhost"
@@ -188,6 +188,21 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
         case _ => false
       }
     }
+
+    "send a GetStateMsg with correct clearFiles value (false) to fileHandler when receiving a GetStateMsg" in {
+      commActor ! GetStateMsg
+      expectMsg(GetStateMsg)
+    }
+
+    "send a GetStateMsg with correct clearFiles value (true) to fileHandler when receiving a GetStateMsg" in {
+      commActor ! GetStateMsg(true)
+      expectMsg(GetStateMsg(true))
+    }
+
+//    "send an ApplyStateMsg to fileHandler msg when receiving a StateMsg (empty)" in {
+//      commActor ! StateMsg(Map.empty)
+//      expectMsg(ApplyStateMsg())
+//    }
   }
 
 }
