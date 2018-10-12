@@ -29,7 +29,7 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
       log.debug(s"$getClassName got an HasConnectionQuery for msgUrl $msgUrl, returning $res")
       sender() ! res
 
-    case AddRemoteConnectionMsg(msgUrl, port, actorPathStr, systemName) =>
+    case AddRemoteConnectionMsg(msgUrl, port, actorPathStr, systemName, verifyConnection) =>
       log.debug(s"$getClassName got an AddRemoteConnectionMsg for msgUrl $msgUrl, port $port, actor $actorPathStr, " +
         s"system $systemName")
       if (port <= 0) log.warning(s"port $port <= 0 !")
@@ -44,16 +44,21 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
               val selection = context.actorSelection(generatedActorPath)
 
               // see if the connection is successful, wait up to 3 seconds for the result
-              selection.resolveOne(FiniteDuration.apply(5, TimeUnit.SECONDS))
-                .onComplete(t => {
-                  if (t.isFailure) {
-                    log.error(t.failed.get.getMessage)
-                  }
-                  else {
-                    log.debug(s"connection successful with actor ${t.get.path}")
-                    context become handleMassages(connections.updated(msgUrl, selection), router.addRoutee(selection))
-                  }
-                })(context.dispatcher)
+              if (verifyConnection) {
+                selection.resolveOne(FiniteDuration.apply(5, TimeUnit.SECONDS))
+                  .onComplete(t => {
+                    if (t.isFailure) {
+                      log.error(t.failed.get.getMessage)
+                    }
+                    else {
+                      log.debug(s"connection successful with actor ${t.get.path}")
+                      context become handleMassages(connections.updated(msgUrl, selection), router.addRoutee(selection))
+                    }
+                  })(context.dispatcher)
+              } else {
+                log.warning(s"connection added without verification for url $msgUrl")
+                context become handleMassages(connections.updated(msgUrl, selection), router.addRoutee(selection))
+              }
             }
             else log.warning(s"$getClassName got an invalid msgUrl $msgUrl")
         }
@@ -117,7 +122,8 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
 
 object CommActor {
   sealed trait RemoteConnectionMsg extends Message
-  case class AddRemoteConnectionMsg(url: String, port: Int, actorClass: String, systemName: Option[String] = None) extends RemoteConnectionMsg
+  case class AddRemoteConnectionMsg(url: String, port: Int, actorClass: String,
+                                    systemName: Option[String] = None, verifyConnection: Boolean = true) extends RemoteConnectionMsg
   case class RemoveRemoteConnectionMsg(url: String, msg: Option[String] = None) extends RemoteConnectionMsg
   case class HasConnectionQuery(url: String) extends RemoteConnectionMsg
   case class DisconnectMsg(msg: Option[String] = None) extends RemoteConnectionMsg

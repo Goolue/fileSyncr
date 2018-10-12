@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 class DiffActor(commActor: => ActorRef, fileHandler : => ActorRef) extends BasicActor {
   def receive(): PartialFunction[Any, Unit] = {
     case ModificationDataMsg(path, newLines, oldLines) =>
-      context.system.log.info("got a ModificationDataMsg")
+      context.system.log.info(s"$getClassName got a ModificationDataMsg")
       val oldLinesValue = oldLines.getOrElse(List())
       val patch = DiffUtils.diff(oldLinesValue.toList.asJava, newLines.toList.asJava)
       commActor ! DiffEventMsg(path, new SerializationPatchWrapper(patch))

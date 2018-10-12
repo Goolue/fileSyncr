@@ -395,30 +395,6 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
     }
 
-    "NOT create a missing file (empty dir) and delete existing file when receiving an ApplyStateMsg with clearFiles = true" in {
-      val missingDir = tempFileDir / "missingDir"
-      missingDir.deleteOnExit()
-      val missingPath = tempFileDir.relativize(missingDir)
-      fileHandler ! ApplyStateMsg(Map(missingPath -> None), clearFiles = true)
-
-      Thread sleep 1000
-
-      missingDir.exists should not be true
-      file.exists should not be true
-    }
-
-    "NOT create a missing file (empty dir) and not delete existing file when receiving an ApplyStateMsg with clearFiles = false" in {
-      val missingDir = tempFileDir / "missingDir"
-      missingDir.deleteOnExit()
-      val missingPath = tempFileDir.relativize(missingDir)
-      fileHandler ! ApplyStateMsg(Map(missingPath -> None))
-
-      Thread sleep 1000
-
-      missingDir.exists should not be true
-      file.exists should be (true)
-    }
-
     "create a missing file (empty file inside missing dir) and not delete existing file when receiving an " +
       "ApplyStateMsg with clearFiles = false" in {
       val missingFile = tempFileDir / "missingDir" / "missingFile.txt"

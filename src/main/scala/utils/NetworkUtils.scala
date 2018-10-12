@@ -60,8 +60,8 @@ object NetworkUtils {
       val addresses = NetworkInterface.getNetworkInterfaces.asScala
         .filter(interface => !interface.isLoopback && interface.isUp)
         .flatMap(interface => interface.getInetAddresses.asScala)
-        .filter(address => !address.getCanonicalHostName.contains(':') && address.isReachable(2))
-        .map(address => address.getCanonicalHostName)
+        .filter(address => !address.getHostAddress.contains(':') && address.isReachable(2))
+        .map(address => address.getHostAddress)
         .toList
       log(s"found ${addresses.size} addresses: $addresses")
       addresses.find(_ => true).filter(isValidIp)

@@ -11,8 +11,9 @@ import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpecLike}
 import testHelpers.Traits.MockSendingMsgsToActor
 import utils.NetworkUtils
 
-class SystemTest extends TestKit(ActorSystem("system1",
-  ActorsContainerBuilder.buildConfigWithIPs(NetworkUtils.getLocalIp.get, NetworkUtils.getExternalIp.get))) with ImplicitSender
+class SystemTest extends TestKit(ActorSystem("system_1",
+  ActorsContainerBuilder.buildConfigWithIPs(NetworkUtils.getLocalIp.getOrElse("127.0.0.1"),
+    NetworkUtils.getExternalIp.getOrElse("127.0.0.1")))) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with BeforeAndAfter{
 
   val localhostUrl = "localhost"
@@ -23,7 +24,7 @@ class SystemTest extends TestKit(ActorSystem("system1",
   private val localIp: String = NetworkUtils.getLocalIp.get
   private val externalIp: String = NetworkUtils.getExternalIp.get
   private val config = ActorsContainerBuilder.buildConfigWithIPs(localIp, externalIp)
-  private val system2 = ActorSystem("system2", config)
+  private val system2 = ActorSystem("system_2", config)
   private val sys2Port = getPortOfSystem(system2)
   private val sys2Host = getHostOfSystem(system2)
 
@@ -47,20 +48,6 @@ class SystemTest extends TestKit(ActorSystem("system1",
       system2.actorSelection(system2 / ActorsContainer.COMM_ACTOR_NAME) ! msg
     }
   }
-//  // system1 actors
-//  private val commActor1 = system1.actorOf(Props(new CommActor(localhostUrl, diffActor1, fileHandler1)), "commActor1")
-//  private lazy val fileHandler1: ActorRef = system1.actorOf(Props(new FileHandlerActor(diffActor1, commActor1, firstDir)))
-//  private lazy val diffActor1: ActorRef = system1.actorOf(Props(new DiffActor(commActor1, fileHandler1)))
-//
-//
-//  // system2 actors
-//  private val commActor2 =  system2.actorOf(Props(new CommActor(localhostUrl, diffActor2, fileHandler2)), "commActor2")
-//  private lazy val fileHandler2: ActorRef = system2.actorOf(Props(new FileHandlerActor(diffActor2, commActor2, secondDir)), "fileHandler2")
-//  private lazy val diffActor2: ActorRef = system2.actorOf(Props(new DiffActor(commActor1, fileHandler2)), "diffActor2")
-
-  private def getCommActorPath(actorsContainer: ActorsContainer): String = {
-    s"/user/${ActorsContainer.COMM_ACTOR_NAME}"
-  }
 
   override def beforeAll {
     println(s"system1 running on port ${AddressExtension.portOf(system)}")
@@ -71,8 +58,10 @@ class SystemTest extends TestKit(ActorSystem("system1",
     firstDir.deleteOnExit()
     secondDir.deleteOnExit()
 
-    container1.sendMsgsToCommActor(AddRemoteConnectionMsg(externalIp, sys2Port, getCommActorPath(container2),
+    container1.sendMsgsToCommActor(AddRemoteConnectionMsg(localIp, sys2Port, ActorsContainer.COMM_ACTOR_NAME,
       Some(system2.name)))
+
+    Thread sleep 1000
   }
 
   override def afterAll {
@@ -94,7 +83,7 @@ class SystemTest extends TestKit(ActorSystem("system1",
       val file = firstDir.createChild(fileName)
       file.deleteOnExit()
 
-      Thread sleep 2000
+      Thread sleep 1000
 
       (secondDir / fileName).exists should be (true)
     }

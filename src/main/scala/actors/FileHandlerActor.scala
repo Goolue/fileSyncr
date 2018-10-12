@@ -173,7 +173,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
       }
       map.foreach(entry => {
         val path = entry._1
-        val linesOpt = entry._2
+        val lines = entry._2
         val currFile = dir / path.toString
 
         if (!currFile.isDirectory) {
@@ -181,7 +181,7 @@ class FileHandlerActor(diffActor: => ActorRef, commActor: => ActorRef, dir: File
             log.debug(s"creating $currFile")
             currFile.createIfNotExists(createParents = true)
           }
-          val txt = linesOpt.toList.flatten.mkString("\n")
+          val txt = lines.mkString("\n")
           log.debug(s"overwriting $currFile with text: $txt")
           currFile.overwrite(txt)
         }

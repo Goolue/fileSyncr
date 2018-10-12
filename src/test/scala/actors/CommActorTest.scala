@@ -43,7 +43,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
   "CommActor" must {
     "add url to it's map when receiving a AddRemoteConnectionMsg(url) with a valid numeric url" in {
       val url = "127.0.0.1"
-      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor")
+      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor", verifyConnection = false)
 
       expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
 
@@ -55,7 +55,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
     "add url to it's map when receiving a AddRemoteConnectionMsg(url, _, _) with a valid non-numeric url" in {
       val url = "localhost"
-      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor")
+      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor", verifyConnection = false)
 
       expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
 
@@ -66,7 +66,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
     "NOT add url to it's map when receiving a AddRactorClassemoteConnectionMsg(url, _, _) with an empty url" in {
       val url = ""
-      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor")
+      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor", verifyConnection = false)
 
       expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
 
@@ -77,7 +77,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
     "NOT add url to it's map when receiving a AddRemoteConnectionMsg(url, _, _) with an invalid url" in {
       val url = "Im an invalid url"
-      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor")
+      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor", verifyConnection = false)
 
       expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
 
@@ -88,7 +88,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
     "NOT add url to it's map when receiving a AddRemoteConnectionMsg(url, _, port <= 0) with an invalid port" in {
       val url = "Im an invalid url"
-      commActor ! AddRemoteConnectionMsg(url, -1, "commActor")
+      commActor ! AddRemoteConnectionMsg(url, -1, "commActor", verifyConnection = false)
 
       expectNoMessage(Duration.apply(1, TimeUnit.SECONDS))
 
@@ -99,7 +99,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
     "remove url from it's map when receiving a RemoveRemoteConnectionMsg(url) with an existing url" in {
       val url = "localhost"
-      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor")
+      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor", verifyConnection = false)
 
       commActor ! HasConnectionQuery(url)
       expectMsg(true)
@@ -112,7 +112,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
     "NOT remove url from it's map when receiving a RemoveRemoteConnectionMsg(url) with a non-existing url" in {
       val url = "localhost"
-      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor")
+      commActor ! AddRemoteConnectionMsg(url, 1000, "commActor", verifyConnection = false)
 
       commActor ! HasConnectionQuery(url)
       expectMsg(true)
@@ -126,8 +126,9 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       expectMsg(false)
     }
 
+    // TODO does not pass when running all tests (not just this file) together
     "forward the msg when receiving a FileDeletedMsg with isRemote = false" in {
-      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
+      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress, verifyConnection = false)
 
       val msg = FileDeletedMsg(File.currentWorkingDirectory.toString())
       commActor ! msg
@@ -135,6 +136,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       expectMsg(FileDeletedMsg(File.currentWorkingDirectory.toString(), true))
     }
 
+    // TODO does not pass when running all tests (not just this file) together
     "Send a FileDeletedMsg msg when receiving a FileDeletedMsg with isRemote = true" in {
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
@@ -146,7 +148,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     }
 
     "forward the msg when receiving a FileCreatedMsg with isRemote = false" in {
-      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
+      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress, verifyConnection = false)
 
       val path = ""
       commActor ! FileCreatedMsg(path)
@@ -154,6 +156,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       expectMsg(FileCreatedMsg(path, isRemote = true))
     }
 
+    // TODO does not pass when running all tests (not just this file) together
     "Send a FileCreatedMsg msg when receiving a FileCreatedMsg with isRemote = true" in {
       commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
 
@@ -164,7 +167,7 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     }
 
     "forward the msg when receiving a DiffEventMsg with isRemote = false" in {
-      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress)
+      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress, verifyConnection = false)
 
       val patch: Patch[String] = DiffUtils.diff(List[String]().asJava, List[String]().asJava)
       val msg = DiffEventMsg("", new SerializationPatchWrapper(patch), isRemote = false)
