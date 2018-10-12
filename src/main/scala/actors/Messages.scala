@@ -35,7 +35,7 @@ object Messages {
     case class GetLinesMsg(path: String, patch: StringPatch) extends GetterMsg
     case class OldLinesMsg(lines: Traversable[String], path: String, patch: StringPatch) extends GetterMsg
 
-    case class GetStateMsg(clearFiles: Boolean = false) extends GetterMsg
+    case class GetStateMsg(url: String, clearFiles: Boolean = false) extends GetterMsg
     case class StateMsg(states: Map[Path, FileLines], clearFiles: Boolean = false) extends GetterMsg
     case class ApplyStateMsg(states: Map[Path, FileLines], clearFiles: Boolean = false) extends GetterMsg
   }

@@ -264,13 +264,15 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
     "return an empty StateMsg when receiving a GetStateMsg and dir is empty" in {
       tempFileDir.clear()
-      fileHandler ! GetStateMsg
+      val url = "Im some url"
+      fileHandler ! GetStateMsg(url)
 
       expectMsg(StateMsg(Map.empty))
     }
 
     "return a StateMsg with correct entry (1 file, correct lines, not dir) when receiving a GetStateMsg" in {
-      fileHandler ! GetStateMsg
+      val url = "Im some url"
+      fileHandler ! GetStateMsg(url)
 
       val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> file.lines))
       expectMsg(stateMsg)
@@ -278,7 +280,8 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
 
     "return a StateMsg with correct entry (2 files, correct lines, not dir) when receiving a GetStateMsg" in {
       File.usingTemporaryFile("SomeOtherFile", ".txt", Some(tempFileDir)) { otherFile =>
-        fileHandler ! GetStateMsg
+        val url = "Im some url"
+        fileHandler ! GetStateMsg(url)
 
         val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> file.lines, tempFileDir.relativize(otherFile) -> otherFile.lines))
         expectMsg(stateMsg)
@@ -290,7 +293,8 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
         otherFile: File <- File.temporaryFile("SomeOtherFile", ".txt", Some(tempFileDir))
         tempDir: File <- File.temporaryDirectory("tempDir", Some(tempFileDir))
       } {
-        fileHandler ! GetStateMsg
+        val url = "Im some url"
+        fileHandler ! GetStateMsg(url)
 
         val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> file.lines, tempFileDir.relativize(otherFile) -> otherFile.lines))
         expectMsg(stateMsg)
@@ -303,7 +307,8 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
         tempDir: File <- File.temporaryDirectory("tempDir", Some(tempFileDir))
         otherFileInTempDir: File <- File.temporaryFile("otherFileInTempDir", ".txt", Some(tempDir))
       } {
-        fileHandler ! GetStateMsg
+        val url = "Im some url"
+        fileHandler ! GetStateMsg(url)
 
         val stateMsg = StateMsg(Map(tempFileDir.relativize(file) -> file.lines,
           tempFileDir.relativize(otherFile) -> otherFile.lines,
@@ -323,7 +328,8 @@ class FileHandlerActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitS
         val txtInOtherFIleInDir1 = "Yep, some text!!"
         otherFileInTempDir1.overwrite(txtInOtherFIleInDir1)
 
-        fileHandler ! GetStateMsg
+        val url = "Im some url"
+        fileHandler ! GetStateMsg(url)
 
         val mapExpected: Map[Path, LinesOption] = Map(tempFileDir.relativize(file) -> Some(file.lines),
           tempFileDir.relativize(otherFile) -> Some(otherFile.lines),

@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import actors.CommActor._
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
-import actors.Messages.GetterMsg.GetStateMsg
+import actors.Messages.GetterMsg.{GetStateMsg, StateMsg}
 import actors.Messages.Message
 import akka.actor.{ActorRef, ActorSelection}
 import akka.event.LoggingReceive
@@ -18,17 +18,20 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
 
   log.debug(s"${self.path.toStringWithoutAddress} created with url $url")
 
-  def receive: Receive = handleMassages(Map.empty, Router(BroadcastRoutingLogic(), Vector.empty[Routee]))
+  def receive: Receive = handleMassages(Map.empty, Set.empty[String], Router(BroadcastRoutingLogic(), Vector.empty[Routee]))
 
   private val protocol = "akka.tcp"
 
 //  private var router: Router = Router(BroadcastRoutingLogic(), Vector.empty[Routee])
 
-  def handleMassages(connections: Map[String, ActorSelection], router: Router): Receive = LoggingReceive {
+  def handleMassages(connections: Map[String, ActorSelection], urlsForGetState: Set[String], router: Router): Receive = LoggingReceive {
     case HasConnectionQuery(msgUrl) =>
       val res = connections.contains(msgUrl)
       log.debug(s"$getClassName got an HasConnectionQuery for msgUrl $msgUrl, returning $res")
       sender() ! res
+
+    case HasUrlForGetStateQuery(msgUrl) =>
+      sender() ! urlsForGetState.contains(msgUrl)
 
     case AddRemoteConnectionMsg(msgUrl, port, actorPathStr, systemName, verifyConnection) =>
       log.debug(s"$getClassName got an AddRemoteConnectionMsg for msgUrl $msgUrl, port $port, actor $actorPathStr, " +
@@ -53,12 +56,12 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
                     }
                     else {
                       log.debug(s"connection successful with actor ${t.get.path}")
-                      context become handleMassages(connections.updated(msgUrl, selection), router.addRoutee(selection))
+                      context become handleMassages(connections.updated(msgUrl, selection), urlsForGetState, router.addRoutee(selection))
                     }
                   })(context.dispatcher)
               } else {
                 log.warning(s"connection added without verification for url $msgUrl")
-                context become handleMassages(connections.updated(msgUrl, selection), router.addRoutee(selection))
+                context become handleMassages(connections.updated(msgUrl, selection), urlsForGetState, router.addRoutee(selection))
               }
             }
             else log.warning(s"$getClassName got an invalid msgUrl $msgUrl")
@@ -68,8 +71,8 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
     case RemoveRemoteConnectionMsg(urlToRemove, msg) =>
       log.debug(s"$getClassName got an RemoveRemoteConnectionMsg for url $urlToRemove with msg $msg")
       if (urlToRemove != null && connections.contains(urlToRemove)) {
-        val newRouter = router.removeRoutee(connections.getOrElse[ActorSelection](urlToRemove, context.actorSelection(""))) //TODO maybe else part is not good
-        context become handleMassages(connections - urlToRemove, newRouter)
+        val newRouter = router.removeRoutee(connections.getOrElse[ActorSelection](urlToRemove, context.actorSelection("")))
+        context become handleMassages(connections - urlToRemove, urlsForGetState, newRouter)
       }
 
     case DisconnectMsg(msg) =>
@@ -106,8 +109,20 @@ class CommActor(private val url: String, private val diffActor: ActorRef,
       }
 
     case getStateMsg: GetStateMsg =>
-      log.debug(s"$getClassName got a GetStateMsg, clearFiles is ${getStateMsg.clearFiles}")
-      fileHandlerActor ! getStateMsg
+      val msgUrl = getStateMsg.url
+      log.debug(s"$getClassName got a GetStateMsg for url $msgUrl, clearFiles is ${getStateMsg.clearFiles}")
+      if (!url.isEmpty && !urlsForGetState.contains(url)) {
+        fileHandlerActor ! getStateMsg
+        context become handleMassages(connections, urlsForGetState + msgUrl, router)
+      }
+    else if(url.isEmpty) log.warning(s"url in GetStateMsg $getStateMsg is empty!")
+    else log.warning(s"url $url already in set!")
+
+
+    case stateMsg: StateMsg =>
+      urlsForGetState.map(url => connections(url)).foreach(selection => selection ! stateMsg)
+      context become handleMassages(connections, Set.empty[String], router)
+
 
     //TODO more msgs
 
@@ -131,4 +146,6 @@ object CommActor {
   case class RemoveRemoteConnectionMsg(url: String, msg: Option[String] = None) extends RemoteConnectionMsg
   case class HasConnectionQuery(url: String) extends RemoteConnectionMsg
   case class DisconnectMsg(msg: Option[String] = None) extends RemoteConnectionMsg
+
+  case class HasUrlForGetStateQuery(url: String) extends Message
 }

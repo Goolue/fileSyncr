@@ -2,7 +2,7 @@ package actors
 
 import java.util.concurrent.TimeUnit
 
-import actors.CommActor.{AddRemoteConnectionMsg, HasConnectionQuery, RemoveRemoteConnectionMsg}
+import actors.CommActor.{AddRemoteConnectionMsg, HasConnectionQuery, HasUrlForGetStateQuery, RemoveRemoteConnectionMsg}
 import actors.Messages.EventDataMessage.{ApplyPatchMsg, DiffEventMsg}
 import actors.Messages.FileEventMessage.{FileCreatedMsg, FileDeletedMsg}
 import actors.Messages.GetterMsg.{ApplyStateMsg, GetStateMsg, StateMsg}
@@ -190,13 +190,43 @@ class CommActorTest extends TestKit(ActorSystem("MySpec")) with ImplicitSender
     }
 
     "send a GetStateMsg with correct clearFiles value (false) to fileHandler when receiving a GetStateMsg" in {
-      commActor ! GetStateMsg
-      expectMsg(GetStateMsg)
+      val url = "Im some url"
+      val msg = GetStateMsg(url)
+      commActor ! msg
+      expectMsg(msg)
     }
 
     "send a GetStateMsg with correct clearFiles value (true) to fileHandler when receiving a GetStateMsg" in {
-      commActor ! GetStateMsg(true)
-      expectMsg(GetStateMsg(true))
+      val url = "Im some url"
+      val msg = GetStateMsg(url, clearFiles = true)
+      commActor ! msg
+      expectMsg(msg)
+    }
+
+    "add the url to it's set when receiving a GetStateMsg(url)" in {
+      val url = "Im some url"
+      val msg = GetStateMsg(url, clearFiles = true)
+      commActor ! msg
+
+      expectMsgType[GetStateMsg]
+
+      commActor ! HasUrlForGetStateQuery(url)
+
+      expectMsg(true)
+    }
+
+    "route the same StateMsg when receiving a StateMsg (empty)" in {
+      commActor ! AddRemoteConnectionMsg(localhostUrl, currPort, testActor.path.toStringWithoutAddress, verifyConnection = false)
+
+      // send GetStateMsg to add the url to set
+      commActor ! GetStateMsg(localhostUrl, clearFiles = true)
+
+      expectMsgType[GetStateMsg]
+
+      val msg = StateMsg(Map.empty)
+      commActor ! msg
+
+      expectMsg(msg)
     }
 
 //    "send an ApplyStateMsg to fileHandler msg when receiving a StateMsg (empty)" in {
